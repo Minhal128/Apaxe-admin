@@ -1,0 +1,29 @@
+.logo-container {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  height: 80px;
+}
+
+.logo-wrapper {
+  position: absolute;
+  top: 10;
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0;
+}
+
+.logo-image {
+  height: 128px;
+  width: auto;
+  object-fit: contain;
+  transform: scale(1.5);
+  transform-origin: top left;
+  margin-top: -60px;
+  padding-left: -30px;
+}
