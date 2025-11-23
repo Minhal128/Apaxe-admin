@@ -57,8 +57,7 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold">User Management</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
         <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
           <DialogTrigger asChild>
             <Button className="bg-primary hover:bg-primary/90 w-full sm:w-auto">

@@ -3,7 +3,6 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 // Auth Pages
-import SignIn from './pages/SignIn'
 import ResetPassword from './pages/ResetPassword'
 
 // Layout
@@ -51,7 +50,7 @@ function App() {
       />
       <Routes>
         {/* Auth Routes */}
-        <Route path="/" element={<SignIn />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Dashboard Routes */}

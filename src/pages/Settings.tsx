@@ -508,7 +508,6 @@ export default function Settings() {
     <div className="flex flex-col lg:flex-row h-full">
       {/* Mobile Dropdown Navigation */}
       <div className="lg:hidden bg-white border-b border-gray-200 p-4">
-        <h1 className="text-xl font-bold text-gray-900 mb-4">Settings</h1>
         <Select 
           value={activeTab} 
           onChange={(e) => setActiveTab(e.target.value)}
@@ -524,7 +523,6 @@ export default function Settings() {
 
       {/* Desktop Sidebar */}
       <div className="hidden lg:block w-80 bg-white border-r border-gray-200 p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
         <nav className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon

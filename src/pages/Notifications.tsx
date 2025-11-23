@@ -75,8 +75,7 @@ export default function Notifications() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Notifications</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
         <Dialog open={isAddNotificationOpen} onOpenChange={setIsAddNotificationOpen}>
           <DialogTrigger asChild>
             <Button className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">

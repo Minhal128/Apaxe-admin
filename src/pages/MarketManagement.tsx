@@ -42,8 +42,7 @@ export default function MarketManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-xl sm:text-2xl font-bold">Market management</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
         <Button onClick={() => navigate('/add-market')} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
           + Add Market
         </Button>
