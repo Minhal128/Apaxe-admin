@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Search, MoreHorizontal, TrendingUp, X } from 'lucide-react'
@@ -244,71 +244,72 @@ export default function Commissions() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle className="text-lg font-semibold">Commission history</CardTitle>
-            <Dialog open={isSetCommissionOpen} onOpenChange={setIsSetCommissionOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
-                  Set commission
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md mx-4">
-                <button
-                  onClick={() => setIsSetCommissionOpen(false)}
-                  className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                >
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Close</span>
-                </button>
-                <DialogHeader>
-                  <DialogTitle className="text-lg font-semibold">Set commission</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Admin commission (%)
-                    </label>
-                    <Input
-                      type="number"
-                      value={adminCommission}
-                      onChange={(e) => setAdminCommission(e.target.value)}
-                      placeholder="Enter admin commission"
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Sub-Admin commission (%)
-                    </label>
-                    <Input
-                      type="number"
-                      value={subAdminCommission}
-                      onChange={(e) => setSubAdminCommission(e.target.value)}
-                      placeholder="Enter sub-admin commission"
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                      Client commission (%)
-                    </label>
-                    <Input
-                      type="number"
-                      value={clientCommission}
-                      onChange={(e) => setClientCommission(e.target.value)}
-                      placeholder="Enter client commission"
-                      className="w-full"
-                    />
-                  </div>
-                  <Button 
-                    onClick={handleSetCommission}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white mt-6"
-                  >
-                    Confirm
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button 
+              onClick={() => setIsSetCommissionOpen(true)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              Set commission
+            </Button>
           </div>
         </CardHeader>
+        <Dialog open={isSetCommissionOpen} onOpenChange={setIsSetCommissionOpen}>
+          <DialogContent className="w-full sm:w-[600px] mx-4">
+            <button
+              onClick={() => setIsSetCommissionOpen(false)}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
+            <DialogHeader>
+              <DialogTitle className="text-lg font-semibold">Set commission</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Admin commission (%)
+                </label>
+                <Input
+                  type="number"
+                  value={adminCommission}
+                  onChange={(e) => setAdminCommission(e.target.value)}
+                  placeholder="Enter admin commission"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Sub-Admin commission (%)
+                </label>
+                <Input
+                  type="number"
+                  value={subAdminCommission}
+                  onChange={(e) => setSubAdminCommission(e.target.value)}
+                  placeholder="Enter sub-admin commission"
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Client commission (%)
+                </label>
+                <Input
+                  type="number"
+                  value={clientCommission}
+                  onChange={(e) => setClientCommission(e.target.value)}
+                  placeholder="Enter client commission"
+                  className="w-full"
+                />
+              </div>
+              <Button 
+                onClick={handleSetCommission}
+                className="w-full bg-green-600 hover:bg-green-700 text-white mt-6"
+              >
+                Confirm
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <CardContent>
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">

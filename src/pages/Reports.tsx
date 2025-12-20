@@ -4,10 +4,22 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Search, MoreHorizontal, TrendingUp } from 'lucide-react'
+import { Search, MoreHorizontal, TrendingUp, ChevronDown } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('pnl-report')
+
+  // P&L Overview Chart Data
+  const pnlOverviewData = [
+    { date: 'Sept 10', value: 40, gray: 50 },
+    { date: 'Sept 11', value: 10, gray: 50 },
+    { date: 'Sept 12', value: 30, gray: 50 },
+    { date: 'Sept 13', value: 25, gray: 50 },
+    { date: 'Sept 14', value: 30, gray: 50 },
+    { date: 'Sept 15', value: 15, gray: 50 },
+    { date: 'Sept 16', value: 20, gray: 50 },
+  ]
 
   // Mock data
   const tradeHistoryData = [
@@ -628,9 +640,52 @@ export default function Reports() {
         </div>
       </div>
 
+      {/* P&L Overview Chart */}
+     
+
       {/* Tab Content */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         {renderTabContent()}
+      </div>
+       <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">P&L Overview</h3>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Summary</span>
+              <button className="px-3 py-1.5 text-sm text-green-500 bg-green-50 rounded flex items-center gap-1">
+                Market Type
+                <ChevronDown size={14} />
+              </button>
+            </div>
+            <button className="px-3 py-1.5 text-sm text-gray-600 rounded flex items-center gap-1">
+              Last 14 Days
+              <ChevronDown size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div className="h-48 lg:h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={pnlOverviewData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis 
+                dataKey="date" 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                ticks={[0, 10, 20, 30, 40, 50]}
+              />
+              <Bar dataKey="gray" fill="#e5e7eb" radius={[4, 4, 0, 0]} barSize={20} />
+              <Bar dataKey="value" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )
