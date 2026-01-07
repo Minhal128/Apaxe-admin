@@ -62,7 +62,7 @@ export const dashboardApi = {
     api.get('/health'),
 
   getDashboard: () =>
-    api.get('/superadmin/dashboard'),
+    api.get('/admin/dashboard'),
 
   getMarketData: (params?: {
     segment?: string;
@@ -107,6 +107,9 @@ export const userApi = {
     limit?: number;
   }) =>
     api.get('/superadmin/users', { params }),
+
+  getUser: (id: string) =>
+    api.get(`/superadmin/users/${id}`),
 
   createUser: (userData: {
     username: string;

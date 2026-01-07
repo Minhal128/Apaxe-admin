@@ -15,8 +15,7 @@ import {
   Sliders,
   ChevronDown,
   User,
-  LogOut,
-  Wifi
+  LogOut
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -34,7 +33,6 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const menuItems = [
-    { icon: Wifi, label: 'Connection Test', path: '/connection-test' },
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: TrendingUp, label: 'Market Watch', path: '/market-watch' },
     { icon: Sliders, label: 'Market Management', path: '/market-management' },
@@ -169,7 +167,10 @@ export default function Layout({ children }: LayoutProps) {
                       <span>Settings</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => window.location.href = 'https://forexsuperadmin.vercel.app/'}>
+                    <DropdownMenuItem onClick={() => {
+                      localStorage.removeItem('admin_token');
+                      window.location.href = 'https://forexadmin.vercel.app/signin';
+                    }}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </DropdownMenuItem>

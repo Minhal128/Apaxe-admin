@@ -12,7 +12,6 @@ import Layout from './components/Layout'
 
 // Dashboard & Markets
 import Dashboard from './pages/Dashboard'
-import ConnectionTest from './pages/ConnectionTest'
 import MarketWatch from './pages/MarketWatch'
 import MarketManagement from './pages/MarketManagement'
 import AddMarket from './pages/AddMarket'
@@ -57,9 +56,6 @@ function App() {
           <Route path="/" element={<Navigate to="/signin" replace />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/reset-password" element={<ResetPassword />} />
-
-          {/* Connection Test */}
-          <Route path="/connection-test" element={<Layout><ConnectionTest /></Layout>} />
 
           {/* Dashboard Routes */}
           <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Users, Eye, UserX, User, TrendingUp, DollarSign, CreditCard, RefreshCw, Wifi, WifiOff } from 'lucide-react'
+import { Users, Eye, UserX, User, TrendingUp, DollarSign, RefreshCw, WifiOff } from 'lucide-react'
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'
 import { Switch } from '@/components/ui/switch'
 import { useApi } from '@/hooks/useApi'
@@ -36,27 +36,14 @@ interface DashboardData {
     name: string;
     value: number;
   }>;
+  profitSharing: Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
 }
 
-const defaultProfitData = [
-  { name: 'Jan', value: 20000 },
-  { name: 'Feb', value: 10000 },
-  { name: 'Mar', value: 30000 },
-  { name: 'Apr', value: 25000 },
-  { name: 'May', value: 35000 },
-  { name: 'Jun', value: 50000 },
-  { name: 'Jul', value: 60000 },
-  { name: 'Aug', value: 55000 },
-  { name: 'Sep', value: 75000 },
-  { name: 'Oct', value: 100000 },
-  { name: 'Nov', value: 55000 },
-]
 
-const pieData = [
-  { name: 'Admin share', value: 45, color: '#18B451' },
-  { name: 'Sub-admin 1 share', value: 15, color: '#3B82F6' },
-  { name: 'Sub-admin 2 share', value: 15, color: '#F59E0B' },
-]
 
 export default function Dashboard() {
   const [marketStatus, setMarketStatus] = useState(true)
@@ -75,28 +62,24 @@ export default function Dashboard() {
   )
 
   // Use real data if available, otherwise fall back to defaults
-  const systemStats = dashboardData?.stats || {
-    totalUsers: 0,
-    activeUsers: 0,
-    totalTrades: 0,
-    openPositions: 0,
-    totalVolume: 0
+  const systemStats = {
+    totalUsers: dashboardData?.stats?.totalUsers ?? 0,
+    activeUsers: dashboardData?.stats?.activeUsers ?? 0,
+    totalTrades: dashboardData?.stats?.totalTrades ?? 0,
+    openPositions: dashboardData?.stats?.openPositions ?? 0,
+    totalVolume: dashboardData?.stats?.totalVolume ?? 0
   }
 
-  const profitData = dashboardData?.profitData || defaultProfitData
+  const profitData = dashboardData?.profitData || []
+
+  const pieData = dashboardData?.profitSharing || []
 
   const activities = dashboardData?.recentActivity?.recentTrades?.slice(0, 5).map((trade) => ({
     text: `${trade.user?.username || 'User'} ${trade.side?.toLowerCase() || 'traded'} ${trade.instrument?.symbol || 'instrument'}`,
-    time: new Date(trade.createdAt).toLocaleString() || '3 minutes ago',
+    time: new Date(trade.createdAt).toLocaleString(),
     icon: trade.side === 'BUY' ? TrendingUp : trade.side === 'SELL' ? DollarSign : User,
     color: 'bg-green-100'
-  })) || [
-      { text: 'Holmet Skelly logged in', time: '3 minutes ago', icon: User, color: 'bg-green-100' },
-      { text: 'Trade placed', time: '3 minutes ago', icon: TrendingUp, color: 'bg-green-100' },
-      { text: 'Wallet credited $34,000', time: '3 minutes ago', icon: DollarSign, color: 'bg-green-100' },
-      { text: 'Wallet debited -$12,000', time: '3 minutes ago', icon: CreditCard, color: 'bg-green-100' },
-      { text: 'Holmet Skelly logged in', time: '3 minutes ago', icon: User, color: 'bg-green-100' },
-    ]
+  })) || []
 
   if (loading) {
     return (
@@ -145,18 +128,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {!error && dashboardData && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Wifi className="h-4 w-4 text-green-600" />
-              <span className="text-green-800 text-sm">
-                Connected to backend successfully
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -310,27 +282,33 @@ export default function Dashboard() {
             <p className="text-sm text-gray-500">Summary</p>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0">
-            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <AreaChart data={profitData}>
-                <defs>
-                  <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#18B451" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#18B451" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="name" stroke="#888" fontSize={12} />
-                <YAxis stroke="#888" fontSize={12} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#18B451"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorValue)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {profitData.length === 0 ? (
+              <div className="flex items-center justify-center h-[250px] sm:h-[300px] text-gray-500">
+                <p className="text-sm">No profit data available</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+                <AreaChart data={profitData}>
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#18B451" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#18B451" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="name" stroke="#888" fontSize={12} />
+                  <YAxis stroke="#888" fontSize={12} />
+                  <Tooltip />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#18B451"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorValue)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -341,20 +319,26 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0">
             <div className="space-y-3 sm:space-y-4">
-              {activities.map((activity, index) => {
-                const IconComponent = activity.icon;
-                return (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className={`w-8 h-8 rounded-lg ${activity.color} flex items-center justify-center flex-shrink-0`}>
-                      <IconComponent size={16} className="text-primary" />
+              {activities.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">No recent activity</p>
+                </div>
+              ) : (
+                activities.map((activity, index) => {
+                  const IconComponent = activity.icon;
+                  return (
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className={`w-8 h-8 rounded-lg ${activity.color} flex items-center justify-center flex-shrink-0`}>
+                        <IconComponent size={16} className="text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-900 leading-tight">{activity.text}</p>
+                        <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 leading-tight">{activity.text}</p>
-                      <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </CardContent>
         </Card>
@@ -366,38 +350,44 @@ export default function Dashboard() {
           <CardTitle className="text-lg sm:text-xl">Profit sharing ratio</CardTitle>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-8">
-            <div className="w-full max-w-[280px] lg:max-w-[250px]">
-              <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
+          {pieData.length === 0 ? (
+            <div className="flex items-center justify-center h-[200px] sm:h-[250px] text-gray-500">
+              <p className="text-sm">No profit sharing data available</p>
             </div>
-            <div className="space-y-3 w-full lg:w-auto">
-              {pieData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between lg:justify-start lg:space-x-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
-                    <span className="text-sm text-gray-700">{item.name}</span>
+          ) : (
+            <div className="flex flex-col lg:flex-row items-center justify-center gap-6 lg:gap-8">
+              <div className="w-full max-w-[280px] lg:max-w-[250px]">
+                <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-3 w-full lg:w-auto">
+                {pieData.map((item, index) => (
+                  <div key={index} className="flex items-center justify-between lg:justify-start lg:space-x-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                      <span className="text-sm text-gray-700">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold">{item.value}%</span>
                   </div>
-                  <span className="text-sm font-semibold">{item.value}%</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

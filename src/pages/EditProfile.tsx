@@ -1,41 +1,130 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Select } from '@/components/ui/select'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import { toast } from 'react-toastify'
+import { userApi } from '@/lib/api'
+import { useApi } from '@/hooks/useApi'
+
+interface UserData {
+  id: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  phone?: string;
+  role: string;
+  status: string;
+  balance?: number;
+  profitSharePercentage?: number;
+  exposureLimit?: number;
+  creditLimit?: number;
+}
 
 export default function EditProfile() {
   const navigate = useNavigate()
-  const { id } = useParams()
+  const { id } = useParams<{ id: string }>()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    fullName: 'Kabiru Michael Marshall',
-    chartId: '#4657584',
-    phoneNumber: '+243.38362923',
-    email: 'kabimarsh@gmail.com',
-    role: 'client',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: 'CLIENT',
+    status: 'ACTIVE',
     userStatus: true,
     twoFactor: false,
-    readOnly: true,
-    parentAccount: '',
-    reassignParent: '',
+    readOnly: false,
     profitShare: 70,
-    orderQuantity: '',
-    maxExposure: '',
-    marginType: 'market',
+    exposureLimit: 0,
+    creditLimit: 0,
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch user data
+  const { data: userData, loading: userLoading, error: userError } = useApi<any>(
+    () => userApi.getUser(id!),
+    { immediate: !!id }
+  )
+
+  const user: UserData | null = userData?.data || userData || null
+
+  // Populate form when user data loads
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        role: user.role || 'CLIENT',
+        status: user.status || 'ACTIVE',
+        userStatus: user.status === 'ACTIVE',
+        twoFactor: false,
+        readOnly: false,
+        profitShare: user.profitSharePercentage || 70,
+        exposureLimit: user.exposureLimit || 0,
+        creditLimit: user.creditLimit || 0,
+      })
+    }
+  }, [user])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    toast.success('Profile updated successfully!')
-    navigate(`/user-profile/${id}`)
+    setIsSubmitting(true)
+
+    try {
+      await userApi.updateUser(id!, {
+        email: formData.email,
+        status: formData.userStatus ? 'ACTIVE' : 'INACTIVE',
+        role: formData.role,
+      })
+      toast.success('Profile updated successfully!')
+      navigate(`/user-profile/${id}`)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update profile')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleResetPassword = () => {
     toast.success('Password reset email sent!')
+  }
+
+  const displayName = user?.username || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'User'
+
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (userError || !user) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <button 
+            onClick={() => navigate('/user-management')}
+            className="text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <h1 className="text-2xl font-bold">Edit profile</h1>
+        </div>
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-6">
+            <p className="text-red-600">Failed to load user data. {userError}</p>
+            <Button onClick={() => navigate('/user-management')} className="mt-4">Go Back</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -53,7 +142,7 @@ export default function EditProfile() {
       <Card>
         <CardContent className="p-6">
           <h2 className="text-lg font-semibold mb-2">Edit user profile</h2>
-          <p className="text-gray-500 text-sm mb-6">Create new market</p>
+          <p className="text-gray-500 text-sm mb-6">Update user information for {displayName}</p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -62,19 +151,21 @@ export default function EditProfile() {
                   Full Name
                 </label>
                 <Input
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  value={`${formData.firstName} ${formData.lastName}`.trim()}
+                  disabled
+                  className="bg-gray-100"
                 />
                 <p className="text-xs text-gray-500 mt-1">Name cannot be changed</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chart ID
+                  User ID
                 </label>
                 <Input
-                  value={formData.chartId}
-                  onChange={(e) => setFormData({ ...formData, chartId: e.target.value })}
+                  value={`#${user.id.slice(-8)}`}
+                  disabled
+                  className="bg-gray-100"
                 />
               </div>
 
@@ -93,9 +184,12 @@ export default function EditProfile() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Phone number
                 </label>
-                <select className="w-full h-12 rounded-md border border-gray-200 bg-gray-50 px-4 text-sm">
-                  <option>{formData.phoneNumber}</option>
-                </select>
+                <Input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="Enter phone number"
+                />
               </div>
 
               <div>
@@ -106,9 +200,10 @@ export default function EditProfile() {
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
-                  <option value="client">Client</option>
-                  <option value="admin">Admin</option>
-                  <option value="sub-admin">Sub Admin</option>
+                  <option value="CLIENT">Client</option>
+                  <option value="MASTER">Master</option>
+                  <option value="SUPER_MASTER">Super Master</option>
+                  <option value="ADMIN">Admin</option>
                 </Select>
               </div>
             </div>
@@ -118,7 +213,11 @@ export default function EditProfile() {
               <div className="flex items-center justify-between py-3">
                 <div>
                   <p className="font-medium text-gray-900">User status</p>
-                  <p className="text-sm text-gray-500">Enable current user status</p>
+                  <p className="text-sm text-gray-500">
+                    Current status: <span className={formData.userStatus ? 'text-green-600' : 'text-red-600'}>
+                      {formData.userStatus ? 'Active' : 'Inactive'}
+                    </span>
+                  </p>
                 </div>
                 <Switch 
                   checked={formData.userStatus}
@@ -153,53 +252,13 @@ export default function EditProfile() {
 
                 <div className="flex items-center justify-between py-3">
                   <div>
-                    <p className="font-medium text-gray-900">Allowed Login devices / IP Whitelist</p>
-                    <p className="text-sm text-gray-500">Add an extra security layer</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between py-3">
-                  <div>
-                    <p className="font-medium text-gray-900">Read-only as Trade</p>
-                    <p className="text-sm text-gray-500">Decide whether this account can view market data</p>
+                    <p className="font-medium text-gray-900">Read-only Mode</p>
+                    <p className="text-sm text-gray-500">User can only view, not trade</p>
                   </div>
                   <Switch 
                     checked={formData.readOnly}
                     onChange={(e) => setFormData({ ...formData, readOnly: e.target.checked })}
                   />
-                </div>
-              </div>
-            </div>
-
-            {/* Hierarchy Relationship */}
-            <div className="border-t pt-6">
-              <h3 className="font-medium text-gray-900 mb-4">Hierarchy relationship</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Parent account
-                  </label>
-                  <Select
-                    value={formData.parentAccount}
-                    onChange={(e) => setFormData({ ...formData, parentAccount: e.target.value })}
-                  >
-                    <option value="">Select parent</option>
-                    <option value="parent1">Parent 1</option>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reassign parent
-                  </label>
-                  <Select
-                    value={formData.reassignParent}
-                    onChange={(e) => setFormData({ ...formData, reassignParent: e.target.value })}
-                  >
-                    <option value="">Select parent</option>
-                    <option value="parent1">Parent 1</option>
-                  </Select>
                 </div>
               </div>
             </div>
@@ -220,82 +279,39 @@ export default function EditProfile() {
                   }}
                 />
               </div>
-              <p className="text-sm text-gray-600">Current: 70% (25, 45,000)</p>
+              <p className="text-sm text-gray-600">
+                User share: <span className="font-semibold">{formData.profitShare}%</span> | 
+                Admin share: <span className="font-semibold">{100 - formData.profitShare}%</span>
+              </p>
             </div>
 
-            {/* Trading Permissions */}
+            {/* Trading Limits */}
             <div className="border-t pt-6">
-              <h3 className="font-medium text-gray-900 mb-4">Trading permissions and limit</h3>
+              <h3 className="font-medium text-gray-900 mb-4">Trading limits</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Order Quantity (Min)
-                  </label>
-                  <Select
-                    value={formData.orderQuantity}
-                    onChange={(e) => setFormData({ ...formData, orderQuantity: e.target.value })}
-                  >
-                    <option value="">Select quantity</option>
-                    <option value="1">1 lot</option>
-                    <option value="10">10 lots</option>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Max
-                  </label>
-                  <Select
-                    value={formData.maxExposure}
-                    onChange={(e) => setFormData({ ...formData, maxExposure: e.target.value })}
-                  >
-                    <option value="">Select max</option>
-                    <option value="100">100 lots</option>
-                    <option value="1000">1000 lots</option>
-                  </Select>
-                </div>
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Margin type
+                    Exposure Limit
                   </label>
-                  <Select
-                    value={formData.marginType}
-                    onChange={(e) => setFormData({ ...formData, marginType: e.target.value })}
-                  >
-                    <option value="market">Market</option>
-                    <option value="limit">Limit</option>
-                  </Select>
+                  <Input
+                    type="number"
+                    value={formData.exposureLimit}
+                    onChange={(e) => setFormData({ ...formData, exposureLimit: parseInt(e.target.value) || 0 })}
+                    placeholder="Enter exposure limit"
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Max Exposure Limit
+                    Credit Limit
                   </label>
-                  <Select>
-                    <option value="">Select limit</option>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <p className="font-medium text-gray-900 mb-2">Order types</p>
-                <div className="flex gap-4">
-                  <label className="flex items-center space-x-2">
-                    <input type="checkbox" className="rounded" defaultChecked />
-                    <span className="text-sm">Market</span>
-                  </label>
-                  <label className="flex items-center space-x-2">
-                    <input type="checkbox" className="rounded" defaultChecked />
-                    <span className="text-sm">Limit</span>
-                  </label>
-                  <label className="flex items-center space-x-2">
-                    <input type="checkbox" className="rounded" />
-                    <span className="text-sm">Stoploss</span>
-                  </label>
+                  <Input
+                    type="number"
+                    value={formData.creditLimit}
+                    onChange={(e) => setFormData({ ...formData, creditLimit: parseInt(e.target.value) || 0 })}
+                    placeholder="Enter credit limit"
+                  />
                 </div>
               </div>
             </div>
@@ -306,11 +322,23 @@ export default function EditProfile() {
                 variant="outline" 
                 onClick={() => navigate(`/user-profile/${id}`)}
                 className="flex-1"
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1">
-                Save
+              <Button 
+                type="submit" 
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save'
+                )}
               </Button>
             </div>
           </form>

@@ -181,6 +181,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.removeItem('admin_token');
             dispatch({ type: 'LOGOUT' });
             toast.info('You have been logged out');
+            // Redirect to the admin app
+            window.location.href = 'https://forexadmin.vercel.app';
         }
     };
 

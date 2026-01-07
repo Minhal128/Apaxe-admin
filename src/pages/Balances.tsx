@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { User, MoreVertical } from 'lucide-react'
 import { useApi } from '@/hooks/useApi'
-import { userApi, dashboardApi } from '@/lib/api'
+import { userApi } from '@/lib/api'
 
 interface UserData {
   id: string;
@@ -53,8 +53,9 @@ export default function Balances() {
     }
   )
 
-  const { data: dashboardStats } = useApi<any>(
-    () => dashboardApi.getDashboard(),
+  // Fetch all users for calculating totals
+  const { data: allUsersData } = useApi<any>(
+    () => userApi.getUsers({ limit: 500 }),
     { immediate: true }
   );
 
@@ -66,10 +67,12 @@ export default function Balances() {
   const users = Array.isArray(usersData) ? usersData : (usersData?.users || [])
   const totalUsers = meta?.total || usersData?.total || 0
 
-  const stats = dashboardStats?.stats || {
-    totalSystemFunds: 0,
-    totalAvailableFunds: 0,
-    lockedFunds: 0,
+  // Calculate stats from actual user data
+  const allUsers = Array.isArray(allUsersData) ? allUsersData : (allUsersData?.users || []);
+  const stats = {
+    totalBalance: allUsers.reduce((sum: number, user: UserData) => sum + (Number(user.balance) || 0), 0),
+    totalAvailableMargin: allUsers.reduce((sum: number, user: UserData) => sum + (Number(user.availableMargin) || Number(user.availableBalance) || 0), 0),
+    totalLockedMargin: allUsers.reduce((sum: number, user: UserData) => sum + (Number(user.lockedMargin) || Number(user.lockedFunds) || 0), 0),
     pendingWithdrawals: 0
   };
 
