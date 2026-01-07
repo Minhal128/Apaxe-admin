@@ -106,10 +106,10 @@ export const userApi = {
     page?: number;
     limit?: number;
   }) =>
-    api.get('/superadmin/users', { params }),
+    api.get('/users', { params }),
 
   getUser: (id: string) =>
-    api.get(`/superadmin/users/${id}`),
+    api.get(`/users/${id}`),
 
   createUser: (userData: {
     username: string;
@@ -118,7 +118,7 @@ export const userApi = {
     role: string;
     balance?: number;
   }) =>
-    api.post('/superadmin/users', userData),
+    api.post('/users', userData),
 
   updateUser: (id: string, updateData: {
     username?: string;
@@ -126,14 +126,17 @@ export const userApi = {
     status?: string;
     role?: string;
   }) =>
-    api.put(`/superadmin/users/${id}`, updateData),
+    api.put(`/users/${id}`, updateData),
 
   adjustBalance: (id: string, data: {
     amount: number;
     type: 'CREDIT' | 'DEBIT';
     reason: string;
   }) =>
-    api.post(`/superadmin/users/${id}/balance`, data),
+    api.post(`/users/${id}/balance`, data),
+
+  resetPassword: (id: string, newPassword: string) =>
+    api.post(`/users/${id}/reset-password`, { newPassword }),
 };
 
 // ============ INSTRUMENT MANAGEMENT ============

@@ -29,6 +29,9 @@ export default function EditProfile() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isResettingPassword, setIsResettingPassword] = useState(false)
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -91,8 +94,23 @@ export default function EditProfile() {
     }
   }
 
-  const handleResetPassword = () => {
-    toast.success('Password reset email sent!')
+  const handleResetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+    
+    setIsResettingPassword(true)
+    try {
+      await userApi.resetPassword(id!, newPassword)
+      toast.success('Password reset successfully!')
+      setShowResetPasswordModal(false)
+      setNewPassword('')
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to reset password')
+    } finally {
+      setIsResettingPassword(false)
+    }
   }
 
   const displayName = user?.username || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'User'
@@ -235,7 +253,7 @@ export default function EditProfile() {
                   <p className="font-medium text-gray-900">Reset password</p>
                   <Button 
                     type="button"
-                    onClick={handleResetPassword}
+                    onClick={() => setShowResetPasswordModal(true)}
                     className="bg-primary hover:bg-primary/90"
                   >
                     Reset password
@@ -344,6 +362,56 @@ export default function EditProfile() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Reset Password Modal */}
+      {showResetPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Reset Password</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Enter a new password for {displayName}
+              </p>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 6 characters)"
+                className="mb-4"
+              />
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowResetPasswordModal(false)
+                    setNewPassword('')
+                  }}
+                  className="flex-1"
+                  disabled={isResettingPassword}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleResetPassword}
+                  className="flex-1"
+                  disabled={isResettingPassword}
+                >
+                  {isResettingPassword ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      Resetting...
+                    </>
+                  ) : (
+                    'Reset Password'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
