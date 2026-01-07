@@ -1,9 +1,44 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Eye, UserX, User, TrendingUp, DollarSign, CreditCard } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Users, Eye, UserX, User, TrendingUp, DollarSign, CreditCard, RefreshCw, Wifi, WifiOff } from 'lucide-react'
 import { AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts'
 import { Switch } from '@/components/ui/switch'
+import { useApi } from '@/hooks/useApi'
+import { dashboardApi } from '@/lib/api'
+import { useState } from 'react'
 
-const profitData = [
+interface DashboardData {
+  stats: {
+    totalUsers: number;
+    activeUsers: number;
+    totalTrades: number;
+    openPositions: number;
+    totalVolume: number;
+  };
+  recentActivity: {
+    recentTrades: Array<{
+      id: string;
+      user: { username: string };
+      instrument: { symbol: string };
+      side: string;
+      quantity: number;
+      value: number;
+      createdAt: string;
+    }>;
+    recentUsers: Array<{
+      id: string;
+      username: string;
+      role: string;
+      createdAt: string;
+    }>;
+  };
+  profitData: Array<{
+    name: string;
+    value: number;
+  }>;
+}
+
+const defaultProfitData = [
   { name: 'Jan', value: 20000 },
   { name: 'Feb', value: 10000 },
   { name: 'Mar', value: 30000 },
@@ -23,25 +58,122 @@ const pieData = [
   { name: 'Sub-admin 2 share', value: 15, color: '#F59E0B' },
 ]
 
-const activities = [
-  { text: 'Holmet Skelly logged in', time: '3 minutes ago', icon: User, color: 'bg-green-100' },
-  { text: 'Trade placed', time: '3 minutes ago', icon: TrendingUp, color: 'bg-green-100' },
-  { text: 'Wallet credited $34,000', time: '3 minutes ago', icon: DollarSign, color: 'bg-green-100' },
-  { text: 'Wallet debited -$12,000', time: '3 minutes ago', icon: CreditCard, color: 'bg-green-100' },
-  { text: 'Holmet Skelly logged in', time: '3 minutes ago', icon: User, color: 'bg-green-100' },
-]
-
 export default function Dashboard() {
+  const [marketStatus, setMarketStatus] = useState(true)
+
+  const { data: dashboardData, loading, error, execute } = useApi<DashboardData>(
+    () => dashboardApi.getDashboard(),
+    {
+      immediate: true, // Auto-call on mount
+      onSuccess: (data) => {
+        console.log("The data is real", data)
+      },
+      onError: (error) => {
+        console.error('Dashboard API error:', error)
+      }
+    }
+  )
+
+  // Use real data if available, otherwise fall back to defaults
+  const systemStats = dashboardData?.stats || {
+    totalUsers: 0,
+    activeUsers: 0,
+    totalTrades: 0,
+    openPositions: 0,
+    totalVolume: 0
+  }
+
+  const profitData = dashboardData?.profitData || defaultProfitData
+
+  const activities = dashboardData?.recentActivity?.recentTrades?.slice(0, 5).map((trade) => ({
+    text: `${trade.user?.username || 'User'} ${trade.side?.toLowerCase() || 'traded'} ${trade.instrument?.symbol || 'instrument'}`,
+    time: new Date(trade.createdAt).toLocaleString() || '3 minutes ago',
+    icon: trade.side === 'BUY' ? TrendingUp : trade.side === 'SELL' ? DollarSign : User,
+    color: 'bg-green-100'
+  })) || [
+      { text: 'Holmet Skelly logged in', time: '3 minutes ago', icon: User, color: 'bg-green-100' },
+      { text: 'Trade placed', time: '3 minutes ago', icon: TrendingUp, color: 'bg-green-100' },
+      { text: 'Wallet credited $34,000', time: '3 minutes ago', icon: DollarSign, color: 'bg-green-100' },
+      { text: 'Wallet debited -$12,000', time: '3 minutes ago', icon: CreditCard, color: 'bg-green-100' },
+      { text: 'Holmet Skelly logged in', time: '3 minutes ago', icon: User, color: 'bg-green-100' },
+    ]
+
+  if (loading) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="border-l-4 border-l-primary">
+              <CardContent className="p-4 sm:p-6">
+                <div className="animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Connection Status */}
+      {error && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <WifiOff className="h-4 w-4 text-yellow-600" />
+                <span className="text-yellow-800 text-sm">
+                  Backend not connected. Using demo data.
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => execute()}
+                disabled={loading}
+                className="text-yellow-700 border-yellow-300 hover:bg-yellow-100"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Retry Connection
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!error && dashboardData && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Wifi className="h-4 w-4 text-green-600" />
+              <span className="text-green-800 text-sm">
+                Connected to backend successfully
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          Dashboard <span className="bg-primary/10 text-primary text-xs px-2 py-1 rounded">Real-time</span>
+        </h1>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           <span className="text-gray-600 text-sm">Market status</span>
           <div className="flex items-center justify-between sm:justify-start gap-2">
             <div className="flex items-center space-x-2">
-              <span className="text-primary font-semibold">Open</span>
-              <Switch defaultChecked />
+              <span className={`font-semibold ${marketStatus ? 'text-primary' : 'text-red-500'}`}>
+                {marketStatus ? 'Open' : 'Closed'}
+              </span>
+              <Switch
+                checked={marketStatus}
+                onCheckedChange={setMarketStatus}
+              />
             </div>
             <p className="text-gray-400 text-xs">until 12:30 AM</p>
           </div>
@@ -55,7 +187,7 @@ export default function Dashboard() {
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <p className="text-gray-600 text-sm mb-1">Total clients</p>
-                <p className="text-2xl sm:text-3xl font-bold">1,320</p>
+                <p className="text-2xl sm:text-3xl font-bold">{systemStats.totalUsers.toLocaleString()}</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Users className="text-primary w-5 h-5 sm:w-6 sm:h-6" />
@@ -82,11 +214,11 @@ export default function Dashboard() {
           <CardContent className="p-4 sm:p-6">
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <p className="text-gray-600 text-sm mb-1">Total sub-admins</p>
-                <p className="text-2xl sm:text-3xl font-bold">256</p>
+                <p className="text-gray-600 text-sm mb-1">Total trades</p>
+                <p className="text-2xl sm:text-3xl font-bold">{systemStats.totalTrades.toLocaleString()}</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="text-primary w-5 h-5 sm:w-6 sm:h-6" />
+                <TrendingUp className="text-primary w-5 h-5 sm:w-6 sm:h-6" />
               </div>
             </div>
             <div className="mt-3 sm:mt-4">
@@ -111,7 +243,7 @@ export default function Dashboard() {
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <p className="text-gray-600 text-sm mb-1">Live users online</p>
-                <p className="text-2xl sm:text-3xl font-bold">123k</p>
+                <p className="text-2xl sm:text-3xl font-bold">{systemStats.activeUsers.toLocaleString()}</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Eye className="text-primary w-5 h-5 sm:w-6 sm:h-6" />
@@ -138,8 +270,8 @@ export default function Dashboard() {
           <CardContent className="p-4 sm:p-6">
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <p className="text-gray-600 text-sm mb-1">Users offline</p>
-                <p className="text-2xl sm:text-3xl font-bold">239</p>
+                <p className="text-gray-600 text-sm mb-1">Open positions</p>
+                <p className="text-2xl sm:text-3xl font-bold">{systemStats.openPositions.toLocaleString()}</p>
               </div>
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <UserX className="text-primary w-5 h-5 sm:w-6 sm:h-6" />
@@ -182,20 +314,20 @@ export default function Dashboard() {
               <AreaChart data={profitData}>
                 <defs>
                   <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#18B451" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#18B451" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#18B451" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#18B451" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="name" stroke="#888" fontSize={12} />
                 <YAxis stroke="#888" fontSize={12} />
                 <Tooltip />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#18B451" 
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#18B451"
                   strokeWidth={2}
-                  fillOpacity={1} 
-                  fill="url(#colorValue)" 
+                  fillOpacity={1}
+                  fill="url(#colorValue)"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -268,6 +400,16 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <p className="text-red-600 text-sm">
+              Error loading dashboard data: {error}. Using fallback data.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

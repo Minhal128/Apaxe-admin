@@ -15,7 +15,8 @@ import {
   Sliders,
   ChevronDown,
   User,
-  LogOut
+  LogOut,
+  Wifi
 } from 'lucide-react'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -33,6 +34,7 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const menuItems = [
+    { icon: Wifi, label: 'Connection Test', path: '/connection-test' },
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: TrendingUp, label: 'Market Watch', path: '/market-watch' },
     { icon: Sliders, label: 'Market Management', path: '/market-management' },

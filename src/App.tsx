@@ -2,7 +2,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
-// Auth Pages
+// Auth
+import { AuthProvider } from './contexts/AuthContext'
+import SignIn from './pages/SignIn'
 import ResetPassword from './pages/ResetPassword'
 
 // Layout
@@ -10,6 +12,7 @@ import Layout from './components/Layout'
 
 // Dashboard & Markets
 import Dashboard from './pages/Dashboard'
+import ConnectionTest from './pages/ConnectionTest'
 import MarketWatch from './pages/MarketWatch'
 import MarketManagement from './pages/MarketManagement'
 import AddMarket from './pages/AddMarket'
@@ -35,55 +38,60 @@ import Reports from './pages/Reports'
 
 function App() {
   return (
-    <Router>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-      <Routes>
-        {/* Auth Routes */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+    <AuthProvider>
+      <Router>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+        />
+        <Routes>
+          {/* Auth Routes */}
+          <Route path="/" element={<Navigate to="/signin" replace />} />
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Dashboard Routes */}
-        <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
-        
-        {/* Market Routes */}
-        <Route path="/market-watch" element={<Layout><MarketWatch /></Layout>} />
-        <Route path="/market-management" element={<Layout><MarketManagement /></Layout>} />
-        <Route path="/add-market" element={<Layout><AddMarket /></Layout>} />
+          {/* Connection Test */}
+          <Route path="/connection-test" element={<Layout><ConnectionTest /></Layout>} />
 
-        {/* User Management Routes */}
-        <Route path="/user-management" element={<Layout><UserManagement /></Layout>} />
-        <Route path="/user-profile/:id" element={<Layout><UserProfile /></Layout>} />
-        <Route path="/edit-profile/:id" element={<Layout><EditProfile /></Layout>} />
+          {/* Dashboard Routes */}
+          <Route path="/dashboard" element={<Layout><Dashboard /></Layout>} />
 
-        {/* Balance Routes */}
-        <Route path="/balances" element={<Layout><Balances /></Layout>} />
-        <Route path="/user-balance/:id" element={<Layout><UserBalance /></Layout>} />
+          {/* Market Routes */}
+          <Route path="/market-watch" element={<Layout><MarketWatch /></Layout>} />
+          <Route path="/market-management" element={<Layout><MarketManagement /></Layout>} />
+          <Route path="/add-market" element={<Layout><AddMarket /></Layout>} />
 
-        {/* Commission Routes */}
-        <Route path="/commissions" element={<Layout><Commissions /></Layout>} />
-        
-        {/* Other Routes */}
-        <Route path="/reports" element={<Layout><Reports /></Layout>} />
-        <Route path="/notifications" element={<Layout><Notifications /></Layout>} />
-        <Route path="/settings" element={<Layout><Settings /></Layout>} />
+          {/* User Management Routes */}
+          <Route path="/user-management" element={<Layout><UserManagement /></Layout>} />
+          <Route path="/user-profile/:id" element={<Layout><UserProfile /></Layout>} />
+          <Route path="/edit-profile/:id" element={<Layout><EditProfile /></Layout>} />
 
-        {/* Redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Balance Routes */}
+          <Route path="/balances" element={<Layout><Balances /></Layout>} />
+          <Route path="/user-balance/:id" element={<Layout><UserBalance /></Layout>} />
+
+          {/* Commission Routes */}
+          <Route path="/commissions" element={<Layout><Commissions /></Layout>} />
+
+          {/* Other Routes */}
+          <Route path="/reports" element={<Layout><Reports /></Layout>} />
+          <Route path="/notifications" element={<Layout><Notifications /></Layout>} />
+          <Route path="/settings" element={<Layout><Settings /></Layout>} />
+
+          {/* Redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   )
 }
 
 export default App
-

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -8,65 +8,48 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Search, MoreHorizontal, Plus, X } from 'lucide-react'
+import { useApi } from '@/hooks/useApi'
+import { logsApi } from '@/lib/api'
 
 export default function Notifications() {
   const [isAddNotificationOpen, setIsAddNotificationOpen] = useState(false)
   const [notificationTitle, setNotificationTitle] = useState('')
   const [messageBody, setMessageBody] = useState('')
   const [scheduleNotifications, setScheduleNotifications] = useState(false)
+  const [filters, setFilters] = useState({
+    status: '',
+    category: 'TRADING', // Default to trading logs
+    search: ''
+  })
 
-  // Mock data for notifications
-  const notifications = [
-    {
-      id: '#1535457663',
-      date: '23 Sep, 25 | 09:00 AM',
-      recipients: 'Super admin',
-      message: 'Good news, our trade has hit take profit...',
-      type: 'Trading'
-    },
-    {
-      id: '#1535457663',
-      date: '23 Sep, 25 | 09:00 AM',
-      recipients: 'Super admin',
-      message: 'Good news, our trade has hit take profit...',
-      type: 'Trading'
-    },
-    {
-      id: '#1535457663',
-      date: '23 Sep, 25 | 09:00 AM',
-      recipients: 'Super admin',
-      message: 'Good news, our trade has hit take profit...',
-      type: 'Trading'
-    },
-    {
-      id: '#1535457663',
-      date: '23 Sep, 25 | 09:00 AM',
-      recipients: 'Super admin',
-      message: 'Good news, our trade has hit take profit...',
-      type: 'Trading'
-    },
-    {
-      id: '#1535457663',
-      date: '23 Sep, 25 | 09:00 AM',
-      recipients: 'Super admin',
-      message: 'Good news, our trade has hit take profit...',
-      type: 'Trading'
-    },
-    {
-      id: '#1535457663',
-      date: '23 Sep, 25 | 09:00 AM',
-      recipients: 'Super admin',
-      message: 'Good news, our trade has hit take profit...',
-      type: 'Trading'
-    },
-    {
-      id: '#1535457663',
-      date: '23 Sep, 25 | 09:00 AM',
-      recipients: 'Super admin',
-      message: 'Good news, our trade has hit take profit...',
-      type: 'Trading'
-    }
-  ]
+  // Fetch Trade Logs as Notifications
+  const { data: logsData, refetch } = useApi<any>(
+    () => logsApi.getTradeLogs({
+      limit: 50,
+      action: filters.category === 'SYSTEM' ? undefined : undefined // Can refine if we have different log types
+    }),
+    { immediate: true }
+  )
+
+  // Polling for real-time updates
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      refetch();
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const logs = logsData?.data || [];
+
+  // Map logs to notification format
+  const notifications = logs.map((log: any) => ({
+    id: log._id ? `#${log._id.substring(log._id.length - 8)}` : `#${Math.random().toString(36).substr(2, 9)}`,
+    date: new Date(log.createdAt).toLocaleString('en-US', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }),
+    recipients: log.user?.username || 'System',
+    message: log.details?.description || log.action || 'No description',
+    type: 'Trading'
+  }));
 
   const handleCreateNotification = () => {
     // Handle notification creation logic here
@@ -158,7 +141,7 @@ export default function Notifications() {
                   <option value="later">Schedule for later</option>
                 </Select>
               </div>
-              <Button 
+              <Button
                 onClick={handleCreateNotification}
                 className="w-full bg-green-600 hover:bg-green-700 text-white mt-6"
               >
@@ -176,7 +159,7 @@ export default function Notifications() {
             All
           </Button>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 flex-1">
           <Select defaultValue="" className="w-full sm:w-auto">
             <option value="">Status</option>
@@ -191,6 +174,8 @@ export default function Notifications() {
           <div className="relative flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <Input
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               placeholder="Search notifications"
               className="pl-10 w-full"
             />
@@ -200,7 +185,7 @@ export default function Notifications() {
 
       {/* Mobile Cards */}
       <div className="block sm:hidden space-y-3">
-        {notifications.map((notification, index) => (
+        {notifications.map((notification: any, index: number) => (
           <Card key={index}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
@@ -212,7 +197,7 @@ export default function Notifications() {
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </div>
-              
+
               <div className="space-y-2 mb-3">
                 <div className="text-sm">
                   <span className="text-gray-500">Recipients:</span>
@@ -223,7 +208,7 @@ export default function Notifications() {
                   <span className="ml-1 font-medium">{notification.type}</span>
                 </div>
               </div>
-              
+
               <div className="text-sm text-gray-700">
                 <span className="text-gray-500">Message:</span>
                 <p className="mt-1">{notification.message}</p>
@@ -250,7 +235,7 @@ export default function Notifications() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {notifications.map((notification, index) => (
+                  {notifications.map((notification: any, index: number) => (
                     <TableRow key={index}>
                       <TableCell className="text-gray-900">{notification.id}</TableCell>
                       <TableCell className="text-gray-900">{notification.date}</TableCell>

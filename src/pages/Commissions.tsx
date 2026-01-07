@@ -1,72 +1,94 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Search, MoreHorizontal, TrendingUp, X } from 'lucide-react'
+import { MoreHorizontal, TrendingUp, X } from 'lucide-react'
+import { commissionApi, dashboardApi } from '@/lib/api'
+import { useApiMutation, useApi } from '@/hooks/useApi'
+import { toast } from 'react-toastify'
+import { Loader2 } from 'lucide-react'
 
 export default function Commissions() {
   const [isSetCommissionOpen, setIsSetCommissionOpen] = useState(false)
   const [adminCommission, setAdminCommission] = useState('')
   const [subAdminCommission, setSubAdminCommission] = useState('')
   const [clientCommission, setClientCommission] = useState('')
+  const [currentPage] = useState(1)
 
-  // Mock data for commission history
-  const commissionHistory = [
+  const { data: dashboardData } = useApi<any>(
+    () => dashboardApi.getDashboard(),
     {
-      id: 1,
-      date: '23 Sep, 25 | 09:00 AM',
-      subAdmin: 'Josh',
-      commission: '10%',
-      profitSplit: '70%',
-      appliedBy: 'Martin Luther',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      date: '23 Sep, 25 | 09:00 AM',
-      subAdmin: 'Josh',
-      commission: '10%',
-      profitSplit: '70%',
-      appliedBy: 'Martin Luther',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      date: '23 Sep, 25 | 09:00 AM',
-      subAdmin: 'Josh',
-      commission: '10%',
-      profitSplit: '70%',
-      appliedBy: 'Martin Luther',
-      status: 'Active'
-    },
-    {
-      id: 4,
-      date: '23 Sep, 25 | 09:00 AM',
-      subAdmin: 'Josh',
-      commission: '10%',
-      profitSplit: '70%',
-      appliedBy: 'Martin Luther',
-      status: 'Active'
-    },
-    {
-      id: 5,
-      date: '23 Sep, 25 | 09:00 AM',
-      subAdmin: 'Josh',
-      commission: '10%',
-      profitSplit: '70%',
-      appliedBy: 'Martin Luther',
-      status: 'Active'
+      revalidateOnFocus: true
     }
-  ]
+  );
+
+  const stats = dashboardData?.stats || {};
+
+  const { data: commissionData, refetch, loading: loadingHistory } = useApi<any>(
+    () => commissionApi.getCommissionHistory({
+      page: currentPage,
+      limit: 50
+    }),
+    {
+      onSuccess: (_data) => {
+        // console.log("The data is real", _data)
+      },
+      onError: (error) => {
+        console.error('Commission API error:', error)
+      }
+    }
+  )
+
+  const { mutate: setCommission, loading: settingCommission } = useApiMutation(
+    (data: {
+      adminCommission: number;
+      subAdminCommission: number;
+      clientCommission: number;
+    }) =>
+      commissionApi.setCommission(data),
+    {
+      onSuccess: () => {
+        toast.success('Commission updated successfully')
+        setIsSetCommissionOpen(false)
+        refetch()
+      },
+      onError: (error: any) => {
+        toast.error(error.message || 'Failed to update commission')
+      }
+    }
+  )
+
+  useEffect(() => {
+    refetch()
+  }, [currentPage])
+
+  const commissionHistory = Array.isArray(commissionData) ? commissionData : (commissionData?.logs || [])
+
+
 
   const handleSetCommission = () => {
-    // Handle commission setting logic here
-    setIsSetCommissionOpen(false)
+    if (!adminCommission || !subAdminCommission || !clientCommission) {
+      toast.error('All commission fields are required')
+      return
+    }
+    setCommission({
+      adminCommission: parseFloat(adminCommission),
+      subAdminCommission: parseFloat(subAdminCommission),
+      clientCommission: parseFloat(clientCommission)
+    })
+  }
+
+  const formatCurrency = (val: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(val || 0)
   }
 
   return (
@@ -83,7 +105,9 @@ export default function Commissions() {
           <CardContent className="pt-0">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">$11,320</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {formatCurrency(stats.totalAdminCommission)}
+                </div>
                 <div className="mt-1 sm:mt-2">
                   <svg width="60" height="16" viewBox="0 0 80 20" className="text-green-500 sm:w-20 sm:h-5">
                     <path
@@ -112,7 +136,9 @@ export default function Commissions() {
           <CardContent className="pt-0">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">$3,200</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {formatCurrency(stats.totalSubAdminCommission)}
+                </div>
                 <div className="mt-1 sm:mt-2">
                   <svg width="60" height="16" viewBox="0 0 80 20" className="text-cyan-500 sm:w-20 sm:h-5">
                     <path
@@ -141,7 +167,9 @@ export default function Commissions() {
           <CardContent className="pt-0">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">$1,300</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {formatCurrency(stats.pendingSettlements)}
+                </div>
                 <div className="mt-1 sm:mt-2">
                   <svg width="60" height="16" viewBox="0 0 80 20" className="text-purple-500 sm:w-20 sm:h-5">
                     <path
@@ -170,7 +198,9 @@ export default function Commissions() {
           <CardContent className="pt-0">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">$200k</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {formatCurrency(stats.totalProfitDistributed)}
+                </div>
                 <div className="mt-1 sm:mt-2">
                   <svg width="60" height="16" viewBox="0 0 80 20" className="text-emerald-500 sm:w-20 sm:h-5">
                     <path
@@ -244,7 +274,7 @@ export default function Commissions() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle className="text-lg font-semibold">Commission history</CardTitle>
-            <Button 
+            <Button
               onClick={() => setIsSetCommissionOpen(true)}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
@@ -301,11 +331,17 @@ export default function Commissions() {
                   className="w-full"
                 />
               </div>
-              <Button 
+              <Button
                 onClick={handleSetCommission}
+                disabled={settingCommission}
                 className="w-full bg-green-600 hover:bg-green-700 text-white mt-6"
               >
-                Confirm
+                {settingCommission ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : 'Confirm'}
               </Button>
             </div>
           </DialogContent>
@@ -318,67 +354,60 @@ export default function Commissions() {
                 All
               </Button>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 flex-1">
-              <Select defaultValue="" className="w-full sm:w-auto">
-                <option value="">Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </Select>
-              <Select defaultValue="" className="w-full sm:w-auto">
-                <option value="">Category</option>
-                <option value="admin">Admin</option>
-                <option value="sub-admin">Sub-Admin</option>
-              </Select>
-              <div className="relative flex-1 sm:max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                <Input
-                  placeholder="Search users"
-                  className="pl-10 w-full"
-                />
-              </div>
             </div>
           </div>
 
           {/* Mobile Cards */}
           <div className="block sm:hidden space-y-3">
-            {commissionHistory.map((item) => (
-              <Card key={item.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="font-medium text-gray-900">{item.subAdmin}</h3>
-                      <p className="text-sm text-gray-500">{item.date}</p>
+            {loadingHistory ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : commissionHistory.length === 0 ? (
+              <div className="text-center p-8 text-gray-500">No commission history found</div>
+            ) : (
+              commissionHistory.map((item: any) => (
+                <Card key={item.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <h3 className="font-medium text-gray-900">
+                          {item.user?.username || `${item.user?.firstName || ''} ${item.user?.lastName || ''}`.trim() || 'N/A'}
+                        </h3>
+                        <p className="text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</p>
+                      </div>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
-                    <div>
-                      <span className="text-gray-500">Commission:</span>
-                      <span className="ml-1 font-medium text-green-600">{item.commission}</span>
+
+                    <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                      <div>
+                        <span className="text-gray-500">Commission:</span>
+                        <span className="ml-1 font-medium text-green-600">{item.details?.commission || '0%'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Profit Split:</span>
+                        <span className="ml-1 font-medium">{item.details?.profitSplit || 'N/A'}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-gray-500">Profit Split:</span>
-                      <span className="ml-1 font-medium">{item.profitSplit}</span>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">
+                        <span className="text-gray-500">Applied by:</span>
+                        <span className="ml-1 font-medium">{item.action}</span>
+                      </div>
+                      <Badge className="bg-green-100 text-green-700 text-xs">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        {item.status || 'Active'}
+                      </Badge>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm">
-                      <span className="text-gray-500">Applied by:</span>
-                      <span className="ml-1 font-medium">{item.appliedBy}</span>
-                    </div>
-                    <Badge className="bg-green-100 text-green-700 text-xs">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                      {item.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
 
           {/* Desktop Table */}
@@ -397,28 +426,44 @@ export default function Commissions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {commissionHistory.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="text-gray-900">{item.date}</TableCell>
-                      <TableCell className="text-gray-900">{item.subAdmin}</TableCell>
-                      <TableCell>
-                        <span className="text-green-600 font-medium">{item.commission}</span>
-                      </TableCell>
-                      <TableCell className="text-gray-900">{item.profitSplit}</TableCell>
-                      <TableCell className="text-gray-900">{item.appliedBy}</TableCell>
-                      <TableCell>
-                        <Badge className="bg-green-100 text-green-700">
-                          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                          {item.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
+                  {loadingHistory ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-primary inline mx-auto" />
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : commissionHistory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                        No commission history found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    commissionHistory.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="text-gray-900">{new Date(item.createdAt).toLocaleString()}</TableCell>
+                        <TableCell className="text-gray-900">
+                          {item.user?.username || `${item.user?.firstName || ''} ${item.user?.lastName || ''}`.trim() || 'N/A'}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-green-600 font-medium">{item.details?.commission || '0%'}</span>
+                        </TableCell>
+                        <TableCell className="text-gray-900">{item.details?.profitSplit || 'N/A'}</TableCell>
+                        <TableCell className="text-gray-900">{item.action}</TableCell>
+                        <TableCell>
+                          <Badge className="bg-green-100 text-green-700">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            {item.status || 'Active'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </ScrollArea>

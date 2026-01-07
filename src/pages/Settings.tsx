@@ -5,6 +5,9 @@ import { Select } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Settings as SettingsIcon, Users, DollarSign, Bell, Shield } from 'lucide-react'
+import { settingsApi } from '@/lib/api'
+import { useApi } from '@/hooks/useApi'
+import { toast } from 'sonner'
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('market-settings')
@@ -18,6 +21,72 @@ export default function Settings() {
   const [overrideNotifications, setOverrideNotifications] = useState(false)
   const [twoFactorAuth, setTwoFactorAuth] = useState(false)
   const [accountFreezeControl, setAccountFreezeControl] = useState(false)
+
+  // Fetch settings on mount
+  const { refetch } = useApi<any>(settingsApi.getSettings, {
+    immediate: true,
+    onSuccess: (data) => {
+      // Map backend keys to local state
+      if (data) {
+        setEnableMarket(data.TRADING_ENABLED ?? false)
+        setAutoDeletePending(data.AUTO_DELETE_PENDING ?? false)
+        setInrConversion(data.INR_CONVERSION ?? true)
+        setOrderTypes(data.ORDER_TYPES_ENABLED ?? false)
+        setAutoSquareOff(data.AUTO_SQUARE_OFF ?? true)
+
+        setOverrideUserManagement(data.OVERRIDE_USER_MANAGEMENT ?? false)
+        setOverrideProfitSharing(data.OVERRIDE_PROFIT_SHARING ?? false)
+        setOverrideNotifications(data.OVERRIDE_NOTIFICATIONS ?? false)
+
+        setTwoFactorAuth(data.TWO_FACTOR_AUTH ?? false)
+        setAccountFreezeControl(data.ACCOUNT_FREEZE ?? false)
+
+        if (data.NOTIFICATION_CHANNELS) setNotificationChannels(data.NOTIFICATION_CHANNELS)
+        if (data.AUTO_NOTIFICATIONS) setAutoNotifications(data.AUTO_NOTIFICATIONS)
+        if (data.ROLE_ACCESS) setRoleAccess(data.ROLE_ACCESS)
+
+        setUserPermissions({
+          globalMinQty: data.GLOBAL_MIN_QTY || '',
+          globalMaxQty: data.GLOBAL_MAX_QTY || '',
+          globalPosLimit: data.GLOBAL_POS_LIMIT || '',
+          segmentMinQty: data.SEGMENT_MIN_QTY || '',
+          segmentMaxQty: data.SEGMENT_MAX_QTY || '',
+          segmentPosLimit: data.SEGMENT_POS_LIMIT || '',
+          marginIntraday: data.MARGIN_INTRADAY || '',
+          marginHolding: data.MARGIN_HOLDING || ''
+        })
+
+        setProfitSharing({
+          globalAdmin: data.PROFIT_GLOBAL_ADMIN || '',
+          globalSubAdmin: data.PROFIT_GLOBAL_SUBADMIN || '',
+          globalClient: data.PROFIT_GLOBAL_CLIENT || '',
+          minCommAdmin: data.PROFIT_MIN_COMM_ADMIN || '',
+          minCommSubAdmin: data.PROFIT_MIN_COMM_SUBADMIN || '',
+          minCommClient: data.PROFIT_MIN_COMM_CLIENT || '',
+          commValue: data.PROFIT_COMM_VALUE || '10'
+        })
+
+        setNotificationLimits({
+          maxCommAdmin: data.NOTIF_MAX_COMM_ADMIN || '',
+          maxCommSubAdmin: data.NOTIF_MAX_COMM_SUBADMIN || '',
+          maxCommClient: data.NOTIF_MAX_COMM_CLIENT || ''
+        })
+
+        setIpAddress(data.IP_WHITELIST || '')
+      }
+    }
+  });
+
+  // Generic update handler
+  const handleUpdateSetting = async (key: string, value: any, category: string = 'GENERAL') => {
+    try {
+      await settingsApi.updateSettings({ [key]: value }, category);
+      toast.success('Settings updated');
+      refetch();
+    } catch (error) {
+      toast.error('Failed to update settings');
+    }
+  }
 
   // Trading days checkboxes
   const [tradingDays, setTradingDays] = useState({
@@ -49,6 +118,33 @@ export default function Settings() {
     master: { viewOrder: true, editBalance: false, sendNotification: false },
     client: { viewOrder: true, editBalance: false, sendNotification: false }
   })
+
+  // User Permission State
+  const [userPermissions, setUserPermissions] = useState({
+    globalMinQty: '', globalMaxQty: '', globalPosLimit: '',
+    segmentMinQty: '', segmentMaxQty: '', segmentPosLimit: '',
+    marginIntraday: '', marginHolding: ''
+  })
+
+  // Profit Sharing State
+  const [profitSharing, setProfitSharing] = useState({
+    globalAdmin: '', globalSubAdmin: '', globalClient: '',
+    minCommAdmin: '', minCommSubAdmin: '', minCommClient: '',
+    commValue: '10'
+  })
+
+  // Notification Limits State
+  const [notificationLimits, setNotificationLimits] = useState({
+    maxCommAdmin: '', maxCommSubAdmin: '', maxCommClient: ''
+  })
+
+  // IP Restriction State
+  const [ipAddress, setIpAddress] = useState('')
+
+  // Generic Blur Handler for Inputs
+  const handleInputBlur = (key: string, value: string, category: string) => {
+    handleUpdateSetting(key, value, category);
+  }
 
   const menuItems = [
     { id: 'market-settings', label: 'Market settings', icon: SettingsIcon },
@@ -89,7 +185,11 @@ export default function Settings() {
             <Checkbox
               key={day}
               checked={checked}
-              onChange={(e) => setTradingDays(prev => ({ ...prev, [day]: e.target.checked }))}
+              onChange={(e) => {
+                const newState = { ...tradingDays, [day]: e.target.checked };
+                setTradingDays(newState);
+                handleUpdateSetting('TRADING_DAYS', newState, 'TRADING');
+              }}
               label={day.charAt(0).toUpperCase() + day.slice(1)}
             />
           ))}
@@ -102,7 +202,13 @@ export default function Settings() {
             <h4 className="font-medium">Auto- delete pending orders</h4>
             <p className="text-sm text-gray-600">Automatically orders pending at market close</p>
           </div>
-          <Switch checked={autoDeletePending} onChange={(e) => setAutoDeletePending(e.target.checked)} />
+          <Switch
+            checked={autoDeletePending}
+            onCheckedChange={(checked) => {
+              setAutoDeletePending(checked)
+              handleUpdateSetting('AUTO_DELETE_PENDING', checked, 'TRADING')
+            }}
+          />
         </div>
 
         <div className="flex items-center justify-between">
@@ -110,7 +216,13 @@ export default function Settings() {
             <h4 className="font-medium">Enable market</h4>
             <p className="text-sm text-gray-600">Allow trading in this market</p>
           </div>
-          <Switch checked={enableMarket} onChange={(e) => setEnableMarket(e.target.checked)} />
+          <Switch
+            checked={enableMarket}
+            onCheckedChange={(checked) => {
+              setEnableMarket(checked);
+              handleUpdateSetting('TRADING_ENABLED', checked, 'TRADING')
+            }}
+          />
         </div>
 
         <div className="flex items-center justify-between">
@@ -118,7 +230,13 @@ export default function Settings() {
             <h4 className="font-medium">INR Conversion</h4>
             <p className="text-sm text-gray-600">Auto-convert currency to INR</p>
           </div>
-          <Switch checked={inrConversion} onChange={(e) => setInrConversion(e.target.checked)} />
+          <Switch
+            checked={inrConversion}
+            onCheckedChange={(checked) => {
+              setInrConversion(checked);
+              handleUpdateSetting('INR_CONVERSION', checked, 'TRADING')
+            }}
+          />
         </div>
       </div>
     </div>
@@ -136,15 +254,30 @@ export default function Settings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Min order quantity</label>
-            <Input placeholder="Enter minimum" />
+            <Input
+              value={userPermissions.globalMinQty}
+              onChange={(e) => setUserPermissions({ ...userPermissions, globalMinQty: e.target.value })}
+              onBlur={(e) => handleInputBlur('GLOBAL_MIN_QTY', e.target.value, 'PERMISSIONS')}
+              placeholder="Enter minimum"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Max order quantity</label>
-            <Input placeholder="Enter maximum" />
+            <Input
+              value={userPermissions.globalMaxQty}
+              onChange={(e) => setUserPermissions({ ...userPermissions, globalMaxQty: e.target.value })}
+              onBlur={(e) => handleInputBlur('GLOBAL_MAX_QTY', e.target.value, 'PERMISSIONS')}
+              placeholder="Enter maximum"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Total position limit</label>
-            <Input placeholder="Enter limit" />
+            <Input
+              value={userPermissions.globalPosLimit}
+              onChange={(e) => setUserPermissions({ ...userPermissions, globalPosLimit: e.target.value })}
+              onBlur={(e) => handleInputBlur('GLOBAL_POS_LIMIT', e.target.value, 'PERMISSIONS')}
+              placeholder="Enter limit"
+            />
           </div>
         </div>
       </div>
@@ -159,15 +292,30 @@ export default function Settings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Min order quantity</label>
-            <Input placeholder="Enter minimum" />
+            <Input
+              value={userPermissions.segmentMinQty}
+              onChange={(e) => setUserPermissions({ ...userPermissions, segmentMinQty: e.target.value })}
+              onBlur={(e) => handleInputBlur('SEGMENT_MIN_QTY', e.target.value, 'PERMISSIONS')}
+              placeholder="Enter minimum"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Max order quantity</label>
-            <Input placeholder="Enter maximum" />
+            <Input
+              value={userPermissions.segmentMaxQty}
+              onChange={(e) => setUserPermissions({ ...userPermissions, segmentMaxQty: e.target.value })}
+              onBlur={(e) => handleInputBlur('SEGMENT_MAX_QTY', e.target.value, 'PERMISSIONS')}
+              placeholder="Enter maximum"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Total position limit</label>
-            <Input placeholder="Enter limit" />
+            <Input
+              value={userPermissions.segmentPosLimit}
+              onChange={(e) => setUserPermissions({ ...userPermissions, segmentPosLimit: e.target.value })}
+              onBlur={(e) => handleInputBlur('SEGMENT_POS_LIMIT', e.target.value, 'PERMISSIONS')}
+              placeholder="Enter limit"
+            />
           </div>
         </div>
       </div>
@@ -177,11 +325,21 @@ export default function Settings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Intra day (%)</label>
-            <Input placeholder="Enter percentage" />
+            <Input
+              value={userPermissions.marginIntraday}
+              onChange={(e) => setUserPermissions({ ...userPermissions, marginIntraday: e.target.value })}
+              onBlur={(e) => handleInputBlur('MARGIN_INTRADAY', e.target.value, 'PERMISSIONS')}
+              placeholder="Enter percentage"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Holding (%)</label>
-            <Input placeholder="Enter percentage" />
+            <Input
+              value={userPermissions.marginHolding}
+              onChange={(e) => setUserPermissions({ ...userPermissions, marginHolding: e.target.value })}
+              onBlur={(e) => handleInputBlur('MARGIN_HOLDING', e.target.value, 'PERMISSIONS')}
+              placeholder="Enter percentage"
+            />
           </div>
         </div>
       </div>
@@ -192,7 +350,13 @@ export default function Settings() {
             <h4 className="font-medium">Order types</h4>
             <p className="text-sm text-gray-600">Market, Limit, Stop Loss, Bracket, Cover</p>
           </div>
-          <Switch checked={orderTypes} onChange={(e) => setOrderTypes(e.target.checked)} />
+          <Switch
+            checked={orderTypes}
+            onCheckedChange={(checked) => {
+              setOrderTypes(checked)
+              handleUpdateSetting('ORDER_TYPES_ENABLED', checked, 'TRADING')
+            }}
+          />
         </div>
 
         <div className="flex items-center justify-between">
@@ -200,7 +364,13 @@ export default function Settings() {
             <h4 className="font-medium">Auto- square off</h4>
             <p className="text-sm text-gray-600">Automatically square off position at market close</p>
           </div>
-          <Switch checked={autoSquareOff} onChange={(e) => setAutoSquareOff(e.target.checked)} />
+          <Switch
+            checked={autoSquareOff}
+            onCheckedChange={(checked) => {
+              setAutoSquareOff(checked)
+              handleUpdateSetting('AUTO_SQUARE_OFF', checked, 'TRADING')
+            }}
+          />
         </div>
 
         <div className="flex items-center justify-between">
@@ -208,7 +378,13 @@ export default function Settings() {
             <h4 className="font-medium">Override per user in User Management tab</h4>
             <p className="text-sm text-gray-600">Market, Limit, Stop Loss, Bracket, Cover</p>
           </div>
-          <Switch checked={overrideUserManagement} onChange={(e) => setOverrideUserManagement(e.target.checked)} />
+          <Switch
+            checked={overrideUserManagement}
+            onCheckedChange={(checked) => {
+              setOverrideUserManagement(checked)
+              handleUpdateSetting('OVERRIDE_USER_MANAGEMENT', checked, 'PERMISSIONS')
+            }}
+          />
         </div>
       </div>
     </div>
@@ -221,15 +397,30 @@ export default function Settings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Admin</label>
-            <Input placeholder="Enter percentage" />
+            <Input
+              value={profitSharing.globalAdmin}
+              onChange={(e) => setProfitSharing({ ...profitSharing, globalAdmin: e.target.value })}
+              onBlur={(e) => handleInputBlur('PROFIT_GLOBAL_ADMIN', e.target.value, 'FINANCIAL')}
+              placeholder="Enter percentage"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Sub-admin</label>
-            <Input placeholder="Enter percentage" />
+            <Input
+              value={profitSharing.globalSubAdmin}
+              onChange={(e) => setProfitSharing({ ...profitSharing, globalSubAdmin: e.target.value })}
+              onBlur={(e) => handleInputBlur('PROFIT_GLOBAL_SUBADMIN', e.target.value, 'FINANCIAL')}
+              placeholder="Enter percentage"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Client</label>
-            <Input placeholder="Enter percentage" />
+            <Input
+              value={profitSharing.globalClient}
+              onChange={(e) => setProfitSharing({ ...profitSharing, globalClient: e.target.value })}
+              onBlur={(e) => handleInputBlur('PROFIT_GLOBAL_CLIENT', e.target.value, 'FINANCIAL')}
+              placeholder="Enter percentage"
+            />
           </div>
         </div>
       </div>
@@ -292,7 +483,13 @@ export default function Settings() {
           <h4 className="font-medium">Override per user in User Management tab</h4>
           <p className="text-sm text-gray-600">Market, Limit, Stop Loss, Bracket, Cover</p>
         </div>
-        <Switch checked={overrideProfitSharing} onChange={(e) => setOverrideProfitSharing(e.target.checked)} />
+        <Switch
+          checked={overrideProfitSharing}
+          onCheckedChange={(checked) => {
+            setOverrideProfitSharing(checked)
+            handleUpdateSetting('OVERRIDE_PROFIT_SHARING', checked, 'FINANCIAL')
+          }}
+        />
       </div>
     </div>
   )
@@ -306,7 +503,11 @@ export default function Settings() {
             <Checkbox
               key={channel}
               checked={checked}
-              onChange={(e) => setNotificationChannels(prev => ({ ...prev, [channel]: e.target.checked }))}
+              onChange={(e) => {
+                const newState = { ...notificationChannels, [channel]: e.target.checked };
+                setNotificationChannels(newState);
+                handleUpdateSetting('NOTIFICATION_CHANNELS', newState, 'NOTIFICATIONS');
+              }}
               label={channel.charAt(0).toUpperCase() + channel.slice(1)}
             />
           ))}
@@ -320,7 +521,11 @@ export default function Settings() {
             <Checkbox
               key={type}
               checked={checked}
-              onChange={(e) => setAutoNotifications(prev => ({ ...prev, [type]: e.target.checked }))}
+              onChange={(e) => {
+                const newState = { ...autoNotifications, [type]: e.target.checked };
+                setAutoNotifications(newState);
+                handleUpdateSetting('AUTO_NOTIFICATIONS', newState, 'NOTIFICATIONS');
+              }}
               label={type === 'marginCall' ? 'Margin call' : type === 'tradeConfirm' ? 'Trade confirm' : 'System alerts'}
             />
           ))}
@@ -332,15 +537,30 @@ export default function Settings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Admin</label>
-            <Input placeholder="Enter maximum" />
+            <Input
+              value={notificationLimits.maxCommAdmin}
+              onChange={(e) => setNotificationLimits({ ...notificationLimits, maxCommAdmin: e.target.value })}
+              onBlur={(e) => handleInputBlur('NOTIF_MAX_COMM_ADMIN', e.target.value, 'NOTIFICATIONS')}
+              placeholder="Enter maximum"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Sub-admin</label>
-            <Input placeholder="Enter maximum" />
+            <Input
+              value={notificationLimits.maxCommSubAdmin}
+              onChange={(e) => setNotificationLimits({ ...notificationLimits, maxCommSubAdmin: e.target.value })}
+              onBlur={(e) => handleInputBlur('NOTIF_MAX_COMM_SUBADMIN', e.target.value, 'NOTIFICATIONS')}
+              placeholder="Enter maximum"
+            />
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Client</label>
-            <Input placeholder="Enter maximum" />
+            <Input
+              value={notificationLimits.maxCommClient}
+              onChange={(e) => setNotificationLimits({ ...notificationLimits, maxCommClient: e.target.value })}
+              onBlur={(e) => handleInputBlur('NOTIF_MAX_COMM_CLIENT', e.target.value, 'NOTIFICATIONS')}
+              placeholder="Enter maximum"
+            />
           </div>
         </div>
       </div>
@@ -350,7 +570,13 @@ export default function Settings() {
           <h4 className="font-medium">Override per user in User Management tab</h4>
           <p className="text-sm text-gray-600">Market, Limit, Stop Loss, Bracket, Cover</p>
         </div>
-        <Switch checked={overrideNotifications} onChange={(e) => setOverrideNotifications(e.target.checked)} />
+        <Switch
+          checked={overrideNotifications}
+          onCheckedChange={(checked) => {
+            setOverrideNotifications(checked)
+            handleUpdateSetting('OVERRIDE_NOTIFICATIONS', checked, 'NOTIFICATIONS')
+          }}
+        />
       </div>
     </div>
   )
@@ -362,26 +588,38 @@ export default function Settings() {
         <div className="flex flex-wrap gap-4 mb-4">
           <Checkbox
             checked={roleAccess.supermaster.viewOrder}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              supermaster: { ...prev.supermaster, viewOrder: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                supermaster: { ...roleAccess.supermaster, viewOrder: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="View order"
           />
           <Checkbox
             checked={roleAccess.supermaster.editBalance}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              supermaster: { ...prev.supermaster, editBalance: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                supermaster: { ...roleAccess.supermaster, editBalance: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="Edit balance"
           />
           <Checkbox
             checked={roleAccess.supermaster.sendNotification}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              supermaster: { ...prev.supermaster, sendNotification: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                supermaster: { ...roleAccess.supermaster, sendNotification: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="Send notification"
           />
         </div>
@@ -392,26 +630,38 @@ export default function Settings() {
         <div className="flex flex-wrap gap-4 mb-4">
           <Checkbox
             checked={roleAccess.master.viewOrder}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              master: { ...prev.master, viewOrder: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                master: { ...roleAccess.master, viewOrder: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="View order"
           />
           <Checkbox
             checked={roleAccess.master.editBalance}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              master: { ...prev.master, editBalance: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                master: { ...roleAccess.master, editBalance: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="Edit balance"
           />
           <Checkbox
             checked={roleAccess.master.sendNotification}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              master: { ...prev.master, sendNotification: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                master: { ...roleAccess.master, sendNotification: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="Send notification"
           />
         </div>
@@ -422,26 +672,38 @@ export default function Settings() {
         <div className="flex flex-wrap gap-4 mb-6">
           <Checkbox
             checked={roleAccess.client.viewOrder}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              client: { ...prev.client, viewOrder: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                client: { ...roleAccess.client, viewOrder: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="View order"
           />
           <Checkbox
             checked={roleAccess.client.editBalance}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              client: { ...prev.client, editBalance: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                client: { ...roleAccess.client, editBalance: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="Edit balance"
           />
           <Checkbox
             checked={roleAccess.client.sendNotification}
-            onChange={(e) => setRoleAccess(prev => ({ 
-              ...prev, 
-              client: { ...prev.client, sendNotification: e.target.checked }
-            }))}
+            onChange={(e) => {
+              const newState = {
+                ...roleAccess,
+                client: { ...roleAccess.client, sendNotification: e.target.checked }
+              };
+              setRoleAccess(newState);
+              handleUpdateSetting('ROLE_ACCESS', newState, 'SECURITY');
+            }}
             label="Send notification"
           />
         </div>
@@ -452,7 +714,13 @@ export default function Settings() {
         <div className="mb-4">
           <label className="text-sm font-medium text-gray-700 mb-2 block">IP</label>
           <div className="flex gap-2">
-            <Input placeholder="192.168.1.1" className="flex-1" />
+            <Input
+              value={ipAddress}
+              onChange={(e) => setIpAddress(e.target.value)}
+              onBlur={(e) => handleInputBlur('IP_WHITELIST', e.target.value, 'SECURITY')}
+              placeholder="192.168.1.1"
+              className="flex-1"
+            />
             <Button className="bg-green-600 hover:bg-green-700 text-white">Add devices</Button>
           </div>
         </div>
@@ -473,7 +741,13 @@ export default function Settings() {
             <h4 className="font-medium">Two-factor authentication</h4>
             <p className="text-sm text-gray-600">If enabled, all users (or selected roles) must verify login with OTP/Authenticator</p>
           </div>
-          <Switch checked={twoFactorAuth} onChange={(e) => setTwoFactorAuth(e.target.checked)} />
+          <Switch
+            checked={twoFactorAuth}
+            onCheckedChange={(checked) => {
+              setTwoFactorAuth(checked)
+              handleUpdateSetting('TWO_FACTOR_AUTH', checked, 'SECURITY')
+            }}
+          />
         </div>
 
         <div className="flex items-center justify-between">
@@ -481,7 +755,13 @@ export default function Settings() {
             <h4 className="font-medium">Account Freeze Control</h4>
             <p className="text-sm text-gray-600">Freezes all user logins until re-enabled (useful for maintenance or audits)</p>
           </div>
-          <Switch checked={accountFreezeControl} onChange={(e) => setAccountFreezeControl(e.target.checked)} />
+          <Switch
+            checked={accountFreezeControl}
+            onCheckedChange={(checked) => {
+              setAccountFreezeControl(checked)
+              handleUpdateSetting('ACCOUNT_FREEZE', checked, 'SECURITY')
+            }}
+          />
         </div>
       </div>
     </div>
@@ -508,8 +788,8 @@ export default function Settings() {
     <div className="flex flex-col lg:flex-row h-full">
       {/* Mobile Dropdown Navigation */}
       <div className="lg:hidden bg-white border-b border-gray-200 p-4">
-        <Select 
-          value={activeTab} 
+        <Select
+          value={activeTab}
           onChange={(e) => setActiveTab(e.target.value)}
           className="w-full"
         >
@@ -530,11 +810,10 @@ export default function Settings() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${
-                  activeTab === item.id
-                    ? 'bg-green-600 text-white'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors ${activeTab === item.id
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 <Icon size={20} />
                 <span className="text-sm">{item.label}</span>

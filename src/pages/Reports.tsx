@@ -1,178 +1,145 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Search, MoreHorizontal, TrendingUp, ChevronDown } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, AreaChart, Area, Tooltip } from 'recharts'
+import { useApi } from '@/hooks/useApi'
+import { dashboardApi, reportsApi, tradingApi, segmentApi } from '@/lib/api'
+import { useMemo } from 'react'
+import { BarChart3 } from 'lucide-react'
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('pnl-report')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [filters, setFilters] = useState({
+    role: '',
+    market: '',
+    dateRange: 'today',
+    startDate: new Date(new Date().setHours(0, 0, 0, 0)).toISOString(),
+    endDate: new Date().toISOString()
+  });
 
-  // P&L Overview Chart Data
-  const pnlOverviewData = [
-    { date: 'Sept 10', value: 40, gray: 50 },
-    { date: 'Sept 11', value: 10, gray: 50 },
-    { date: 'Sept 12', value: 30, gray: 50 },
-    { date: 'Sept 13', value: 25, gray: 50 },
-    { date: 'Sept 14', value: 30, gray: 50 },
-    { date: 'Sept 15', value: 15, gray: 50 },
-    { date: 'Sept 16', value: 20, gray: 50 },
-  ]
+  // Fetch Segments for Market Filter
+  const { data: segmentsData } = useApi<{ segments: any[] }>(segmentApi.getSegments, {
+    immediate: true
+  });
+  const segments = segmentsData?.segments || [];
 
-  // Mock data
-  const tradeHistoryData = [
+  // Fetch Dashboard Stats
+  const { data: dashboardData, refetch: refetchDashboard } = useApi<any>(dashboardApi.getDashboard, {
+    immediate: true
+  });
+  const stats = dashboardData?.data?.stats || dashboardData?.stats || {};
+  const volumeData = dashboardData?.data?.profitData || dashboardData?.profitData || [];
+
+  // Fetch Trades for history report
+  const { data: tradesData, refetch: refetchTrades, loading: loadingTrades } = useApi<any>(
+    () => tradingApi.getTrades({
+      page: currentPage,
+      limit: 50,
+      segmentId: filters.market || undefined,
+      startDate: filters.startDate || undefined,
+      endDate: filters.endDate || undefined
+    }),
     {
-      tradeId: '#1535457663',
-      userId: '#1535457663',
-      instrument: 'S & P 500',
-      orderType: 'Buy',
-      quantity: '100',
-      price: '₹1190',
-      time: '09:00 AM',
-      status: 'Active'
-    },
-    {
-      tradeId: '#1535457663',
-      userId: '#1535457663',
-      instrument: 'S & P 500',
-      orderType: 'Sell',
-      quantity: '100',
-      price: '₹1190',
-      time: '09:00 AM',
-      status: 'Active'
-    },
-    {
-      tradeId: '#1535457663',
-      userId: '#1535457663',
-      instrument: 'S & P 500',
-      orderType: 'Buy',
-      quantity: '100',
-      price: '₹1190',
-      time: '09:00 AM',
-      status: 'Active'
-    },
-    {
-      tradeId: '#1535457663',
-      userId: '#1535457663',
-      instrument: 'S & P 500',
-      orderType: 'Sell',
-      quantity: '100',
-      price: '₹1190',
-      time: '09:00 AM',
-      status: 'Active'
+      immediate: activeTab === 'trade-history',
+      onSuccess: (data) => console.log("The data is real (Trades)", data)
     }
-  ]
+  )
 
-  const pnlData = [
+  // Fetch PnL Report
+  const { data: pnlReportData, refetch: refetchPnL, loading: loadingPnL } = useApi<any>(
+    () => reportsApi.generatePnLReport({
+      page: currentPage,
+      limit: 50,
+      segmentId: filters.market || undefined,
+      startDate: filters.startDate || undefined,
+      endDate: filters.endDate || undefined
+    }),
     {
-      user: '#1535457663',
-      market: 'Nifty 500',
-      realizedPnl: '₹25,000',
-      unrealizedPnl: '₹1190',
-      netPnl: '₹190',
-      date: '23 Sep, 25 | 09:00 AM'
-    },
-    {
-      user: '#1535457663',
-      market: 'Nifty 500',
-      realizedPnl: '₹25,000',
-      unrealizedPnl: '₹1190',
-      netPnl: '₹190',
-      date: '23 Sep, 25 | 09:00 AM'
-    },
-    {
-      user: '#1535457663',
-      market: 'Nifty 500',
-      realizedPnl: '₹25,000',
-      unrealizedPnl: '₹1190',
-      netPnl: '₹190',
-      date: '23 Sep, 25 | 09:00 AM'
-    },
-    {
-      user: '#1535457663',
-      market: 'Nifty 500',
-      realizedPnl: '₹25,000',
-      unrealizedPnl: '₹1190',
-      netPnl: '₹190',
-      date: '23 Sep, 25 | 09:00 AM'
+      immediate: activeTab === 'pnl-report',
+      onSuccess: (data) => console.log("The data is real (PnL)", data)
     }
-  ]
+  )
 
-  const profitSharingData = [
+  // Fetch Profit Sharing Report
+  const { data: profitShareData, refetch: refetchProfitShare, loading: loadingProfitShare } = useApi<any>(
+    () => reportsApi.getLedgerEntries({
+      category: 'PROFIT_SHARE',
+      page: currentPage,
+      limit: 50,
+      startDate: filters.startDate,
+      endDate: filters.endDate
+    }),
     {
-      userId: '#1535457663',
-      role: 'Admin',
-      commission: '25',
-      adminShare: '₹1190',
-      amountEarned: '₹1190',
-      date: '23/09/2025',
-      status: 'Active'
-    },
-    {
-      userId: '#1535457663',
-      role: 'Admin',
-      commission: '25',
-      adminShare: '₹1190',
-      amountEarned: '₹1190',
-      date: '23/09/2025',
-      status: 'Active'
-    },
-    {
-      userId: '#1535457663',
-      role: 'Admin',
-      commission: '25',
-      adminShare: '₹1190',
-      amountEarned: '₹1190',
-      date: '23/09/2025',
-      status: 'Active'
-    },
-    {
-      userId: '#1535457663',
-      role: 'Admin',
-      commission: '25',
-      adminShare: '₹1190',
-      amountEarned: '₹1190',
-      date: '23/09/2025',
-      status: 'Active'
+      immediate: activeTab === 'profit-sharing',
+      onSuccess: (data) => console.log("The data is real (Profit Share)", data)
     }
-  ]
+  )
 
-  const balanceData = [
+  // Fetch Balance Report
+  const { data: balanceReportData, refetch: refetchBalance, loading: loadingBalance } = useApi<any>(
+    () => reportsApi.getLedgerEntries({
+      page: currentPage,
+      limit: 50,
+      startDate: filters.startDate,
+      endDate: filters.endDate
+    }),
     {
-      userId: '#1535457663',
-      credit: '₹1190',
-      debit: '₹1190',
-      marginUsed: '₹1190',
-      availableBalance: '₹1190',
-      lockedFunds: '₹1190'
-    },
-    {
-      userId: '#1535457663',
-      credit: '₹1190',
-      debit: '₹1190',
-      marginUsed: '₹1190',
-      availableBalance: '₹1190',
-      lockedFunds: '₹1190'
-    },
-    {
-      userId: '#1535457663',
-      credit: '₹1190',
-      debit: '₹1190',
-      marginUsed: '₹1190',
-      availableBalance: '₹1190',
-      lockedFunds: '₹1190'
-    },
-    {
-      userId: '#1535457663',
-      credit: '₹1190',
-      debit: '₹1190',
-      marginUsed: '₹1190',
-      availableBalance: '₹1190',
-      lockedFunds: '₹1190'
+      immediate: activeTab === 'balance-report',
+      onSuccess: (data) => console.log("The data is real (Balance)", data)
     }
-  ]
+  )
+
+  // Handle Filter Changes
+  const handleFilterChange = (key: string, value: string) => {
+    let newFilters = { ...filters, [key]: value };
+
+    if (key === 'dateRange') {
+      const end = new Date();
+      const start = new Date();
+      if (value === 'today') start.setHours(0, 0, 0, 0);
+      else if (value === 'week') start.setDate(start.getDate() - 7);
+      else if (value === 'month') start.setMonth(start.getMonth() - 1);
+
+      newFilters.startDate = start.toISOString();
+      newFilters.endDate = end.toISOString();
+    }
+
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset page on filter change
+  }
+
+  // Refetch when tab or filters change
+  useEffect(() => {
+    // Initial fetch on tab/filter change
+    if (activeTab === 'trade-history') refetchTrades()
+    if (activeTab === 'pnl-report') refetchPnL()
+    if (activeTab === 'profit-sharing') refetchProfitShare()
+    if (activeTab === 'balance-report') refetchBalance()
+
+    // Polling interval for real-time updates
+    const intervalId = setInterval(() => {
+      // Always refresh dashboard stats
+      refetchDashboard();
+
+      // Refresh active tab data
+      if (activeTab === 'trade-history') refetchTrades()
+      if (activeTab === 'pnl-report') refetchPnL()
+      if (activeTab === 'profit-sharing') refetchProfitShare()
+      if (activeTab === 'balance-report') refetchBalance()
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [activeTab, currentPage, filters])
+
+  const trades = tradesData?.data || []
+  const pnlReports = pnlReportData?.data || []
+  const profitSharingReports = profitShareData?.data || []
+  const balanceReports = balanceReportData?.data || []
 
   const tabs = [
     { id: 'pnl-report', label: 'P&L Report' },
@@ -180,6 +147,15 @@ export default function Reports() {
     { id: 'profit-sharing', label: 'Profit sharing report' },
     { id: 'balance-report', label: 'Balance Report' }
   ]
+
+  // Prepare chart data
+  const pnlOverviewData = pnlReports.length > 0
+    ? pnlReports.slice(0, 10).map((item: any) => ({
+      date: item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A',
+      value: Number(item.netPnL) || 0,
+      gray: 0
+    })).reverse()
+    : [{ date: 'No Data', value: 0, gray: 0 }];
 
   const renderAreaChart = () => (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -203,158 +179,145 @@ export default function Reports() {
           </svg>
         </div>
       </div>
-      
-      <div className="relative h-64">
-        {/* Y-axis labels */}
-        <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500 pr-4">
-          <span>100k</span>
-          <span>80k</span>
-          <span>60k</span>
-          <span>40k</span>
-          <span>20k</span>
-          <span>5k</span>
-        </div>
-        
-        {/* Chart area */}
-        <div className="ml-8 h-full relative">
-          <svg viewBox="0 0 600 200" className="w-full h-full">
+
+      <div className="relative h-64 w-full">
+         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <AreaChart data={volumeData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <defs>
-              <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.4"/>
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.1"/>
+              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
               </linearGradient>
             </defs>
-            {/* Area fill */}
-            <path
-              d="M 0 150 Q 50 120 100 140 Q 150 160 200 120 Q 250 100 300 110 Q 350 130 400 100 Q 450 90 500 80 Q 550 60 600 120 L 600 200 L 0 200 Z"
-              fill="url(#areaGradient)"
-            />
-            {/* Line */}
-            <path
-              d="M 0 150 Q 50 120 100 140 Q 150 160 200 120 Q 250 100 300 110 Q 350 130 400 100 Q 450 90 500 80 Q 550 60 600 120"
-              stroke="#10b981"
-              strokeWidth="2"
-              fill="none"
-            />
-          </svg>
-        </div>
-        
-        {/* Blue line at bottom */}
-        <div className="absolute bottom-0 left-8 right-0 h-1 bg-blue-500 rounded"></div>
+            <XAxis dataKey="name" hide />
+            <YAxis hide />
+            <Tooltip />
+            <Area type="monotone" dataKey="value" stroke="#10b981" fillOpacity={1} fill="url(#areaGradient)" />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   )
 
-  const renderStackedBarChart = () => (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="flex justify-between items-start mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Profit sharing chart</h3>
-        <div className="flex items-center space-x-6 text-sm">
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-            <span className="text-gray-700">Admin</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-            <span className="text-gray-700">Sub-Admin</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-3 h-3 bg-green-800 rounded-full"></div>
-            <span className="text-gray-700">Client</span>
-          </div>
+  // Process data for the chart (moved to top level to avoid hook violation)
+  const profitSharingChartData = useMemo(() => {
+    if (!profitSharingReports.length) return [];
+
+    // Group by month
+    const grouped = profitSharingReports.reduce((acc: any, item: any) => {
+      const date = new Date(item.createdAt);
+      const month = date.toLocaleString('default', { month: 'short' });
+
+      if (!acc[month]) {
+        acc[month] = { month, admin: 0, subAdmin: 0, client: 0 };
+      }
+
+      const amount = Number(item.amount) || 0;
+      const role = item.user?.role || 'USER';
+
+      if (role === 'ADMIN') acc[month].admin += amount;
+      else if (role === 'SUPER_MASTER') acc[month].subAdmin += amount;
+      else acc[month].client += amount;
+
+      return acc;
+    }, {});
+
+    return Object.values(grouped);
+  }, [profitSharingReports]);
+
+  const renderStackedBarChart = () => {
+    if (profitSharingChartData.length === 0) {
+      return (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col items-center justify-center h-64">
+          <p className="text-gray-500 mb-2">No profit sharing data available for chart</p>
+          <BarChart3 className="w-12 h-12 text-gray-300" />
         </div>
-      </div>
-      
-      <div className="relative h-56">
-        {/* Y-axis labels */}
-        <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-gray-500 pr-4">
-          <span>1,000</span>
-          <span>800</span>
-          <span>600</span>
-          <span>400</span>
-          <span>200</span>
-          <span>0</span>
-        </div>
-        
-        {/* Stacked bars */}
-        <div className="ml-12 h-full flex items-end justify-between pb-8">
-          {[
-            { admin: 30, subAdmin: 40, client: 30, month: 'Jan' },
-            { admin: 35, subAdmin: 45, client: 35, month: 'Feb' },
-            { admin: 25, subAdmin: 35, client: 25, month: 'Mar' },
-            { admin: 40, subAdmin: 50, client: 40, month: 'Apr' },
-            { admin: 30, subAdmin: 40, client: 30, month: 'May' },
-            { admin: 45, subAdmin: 55, client: 45, month: 'Jun' },
-            { admin: 35, subAdmin: 45, client: 35, month: 'Jul' },
-            { admin: 40, subAdmin: 50, client: 40, month: 'Aug' },
-            { admin: 35, subAdmin: 45, client: 35, month: 'Sep' },
-            { admin: 50, subAdmin: 60, client: 50, month: 'Oct' },
-            { admin: 45, subAdmin: 55, client: 45, month: 'Nov' },
-            { admin: 40, subAdmin: 50, client: 40, month: 'Dec' }
-          ].map((data, index) => (
-            <div key={index} className="flex flex-col items-center">
-              <div className="w-12 flex flex-col">
-                <div 
-                  className="bg-green-400 w-full"
-                  style={{ height: `${data.admin}px` }}
-                />
-                <div 
-                  className="bg-green-600 w-full"
-                  style={{ height: `${data.subAdmin}px` }}
-                />
-                <div 
-                  className="bg-green-800 w-full"
-                  style={{ height: `${data.client}px` }}
-                />
-              </div>
-              <span className="text-xs text-gray-500 mt-2">{data.month}</span>
+      )
+    }
+
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex justify-between items-start mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">Profit sharing chart</h3>
+          <div className="flex items-center space-x-6 text-sm">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+              <span className="text-gray-700">Admin</span>
             </div>
-          ))}
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+              <span className="text-gray-700">Sub-Admin</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-green-800 rounded-full"></div>
+              <span className="text-gray-700">Client</span>
+            </div>
+          </div>
         </div>
-        
-        {/* X-axis label */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-sm text-gray-600">
-          Month
+
+        <div className="relative h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <BarChart data={profitSharingChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Bar dataKey="admin" stackId="a" fill="#4ade80" />
+              <Bar dataKey="subAdmin" stackId="a" fill="#16a34a" />
+              <Bar dataKey="client" stackId="a" fill="#166534" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'pnl-report':
         return (
           <div className="space-y-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Market</TableHead>
-                  <TableHead>Realized P&L</TableHead>
-                  <TableHead>Unrealized P&L</TableHead>
-                  <TableHead>Net P&L</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pnlData.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{item.user}</TableCell>
-                    <TableCell>{item.market}</TableCell>
-                    <TableCell>{item.realizedPnl}</TableCell>
-                    <TableCell>{item.unrealizedPnl}</TableCell>
-                    <TableCell>{item.netPnl}</TableCell>
-                    <TableCell>{item.date}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Market</TableHead>
+                    <TableHead>Realized P&L</TableHead>
+                    <TableHead>Unrealized P&L</TableHead>
+                    <TableHead>Net P&L</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {loadingPnL ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4">Loading report...</TableCell>
+                    </TableRow>
+                  ) : pnlReports.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4">No data available for selected filters</TableCell>
+                    </TableRow>
+                  ) : (
+                    pnlReports.map((item: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.user}</TableCell>
+                        <TableCell>{item.market}</TableCell>
+                        <TableCell className={Number(item.realizedPnL) >= 0 ? "text-green-600" : "text-red-600"}>{Number(item.realizedPnL).toFixed(2)}</TableCell>
+                        <TableCell>{Number(item.unrealizedPnL).toFixed(2)}</TableCell>
+                        <TableCell className={Number(item.netPnL) >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>{Number(item.netPnL).toFixed(2)}</TableCell>
+                        <TableCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
             {/* {renderBarChart()} */}
           </div>
         )
@@ -362,49 +325,60 @@ export default function Reports() {
       case 'trade-history':
         return (
           <div className="space-y-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Trade ID</TableHead>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Instrument</TableHead>
-                  <TableHead>Order type</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tradeHistoryData.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{item.tradeId}</TableCell>
-                    <TableCell>{item.userId}</TableCell>
-                    <TableCell>{item.instrument}</TableCell>
-                    <TableCell>
-                      <span className={item.orderType === 'Buy' ? 'text-green-600' : 'text-red-600'}>
-                        {item.orderType}
-                      </span>
-                    </TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>{item.price}</TableCell>
-                    <TableCell>{item.time}</TableCell>
-                    <TableCell>
-                      <Badge variant="success" className="bg-green-100 text-green-700">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Trade ID</TableHead>
+                    <TableHead>User ID</TableHead>
+                    <TableHead>Instrument</TableHead>
+                    <TableHead>Order type</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {loadingTrades ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-4">Loading trades...</TableCell>
+                    </TableRow>
+                  ) : trades.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-4">No trades found</TableCell>
+                    </TableRow>
+                  ) : (
+                    trades.map((item: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-mono text-xs">{item.id.substring(0, 8)}...</TableCell>
+                        <TableCell>{item.user?.username || item.user?.firstName || item.userId}</TableCell>
+                        <TableCell>{item.instrument?.symbol}</TableCell>
+                        <TableCell>
+                          <span className={item.side === 'BUY' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
+                            {item.side}
+                          </span>
+                        </TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.price}</TableCell>
+                        <TableCell>{new Date(item.createdAt).toLocaleString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={item.status === 'COMPLETED' || item.status === 'CLOSED' ? 'border-green-500 text-green-700 bg-green-50' : 'border-gray-500 text-gray-700'}>
+                            {item.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
             {renderAreaChart()}
           </div>
         )
@@ -412,43 +386,46 @@ export default function Reports() {
       case 'profit-sharing':
         return (
           <div className="space-y-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Commission (%)</TableHead>
-                  <TableHead>Admin share</TableHead>
-                  <TableHead>Amount Earned</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {profitSharingData.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{item.userId}</TableCell>
-                    <TableCell>{item.role}</TableCell>
-                    <TableCell>{item.commission}</TableCell>
-                    <TableCell>{item.adminShare}</TableCell>
-                    <TableCell>{item.amountEarned}</TableCell>
-                    <TableCell>{item.date}</TableCell>
-                    <TableCell>
-                      <Badge variant="success" className="bg-green-100 text-green-700">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        {item.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {loadingProfitShare ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4">Loading profit share data...</TableCell>
+                    </TableRow>
+                  ) : profitSharingReports.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4">No profit sharing records found</TableCell>
+                    </TableRow>
+                  ) : (
+                    profitSharingReports.map((item: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.user?.username || item.user?.firstName || item.userId}</TableCell>
+                        <TableCell>{item.user?.role || 'USER'}</TableCell>
+                        <TableCell className="font-medium text-green-700">₹{item.amount}</TableCell>
+                        <TableCell>{item.description || 'Profit Share'}</TableCell>
+                        <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
             {renderStackedBarChart()}
           </div>
         )
@@ -456,36 +433,52 @@ export default function Reports() {
       case 'balance-report':
         return (
           <div className="space-y-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Credit</TableHead>
-                  <TableHead>Debit</TableHead>
-                  <TableHead>Margin used</TableHead>
-                  <TableHead>Available Balance</TableHead>
-                  <TableHead>Locked funds</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {balanceData.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{item.userId}</TableCell>
-                    <TableCell>{item.credit}</TableCell>
-                    <TableCell>{item.debit}</TableCell>
-                    <TableCell>{item.marginUsed}</TableCell>
-                    <TableCell>{item.availableBalance}</TableCell>
-                    <TableCell>{item.lockedFunds}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {loadingBalance ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4">Loading balance history...</TableCell>
+                    </TableRow>
+                  ) : balanceReports.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4">No balance records found</TableCell>
+                    </TableRow>
+                  ) : (
+                    balanceReports.map((item: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell>{item.user?.username || item.user?.firstName || item.userId}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={item.type === 'CREDIT' ? 'border-green-500 text-green-700' : 'border-red-500 text-red-700'}>
+                            {item.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={item.type === 'CREDIT' ? 'text-green-600' : 'text-red-600'}>
+                          {item.type === 'CREDIT' ? '+' : '-'}₹{item.amount}
+                        </TableCell>
+                        <TableCell>{item.description}</TableCell>
+                        <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         )
 
@@ -503,7 +496,7 @@ export default function Reports() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Trades Executed</p>
-              <p className="text-2xl font-bold text-gray-900">146</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalTrades || 0}</p>
               <div className="mt-2">
                 <svg width="60" height="20" viewBox="0 0 60 20" className="text-green-500">
                   <path
@@ -526,7 +519,9 @@ export default function Reports() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total System P&L</p>
-              <p className="text-2xl font-bold text-gray-900">₹5,200</p>
+              <p className={`text-2xl font-bold ${stats.totalPnL >= 0 ? "text-green-700" : "text-red-700"}`}>
+                {stats.totalPnL ? `₹${stats.totalPnL.toFixed(2)}` : '₹0.00'}
+              </p>
               <div className="mt-2">
                 <svg width="60" height="20" viewBox="0 0 60 20" className="text-cyan-500">
                   <path
@@ -549,7 +544,7 @@ export default function Reports() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Commission Paid</p>
-              <p className="text-2xl font-bold text-gray-900">₹1,300</p>
+              <p className="text-2xl font-bold text-gray-900">₹{stats.totalCommission?.toFixed(2) || '0.00'}</p>
               <div className="mt-2">
                 <svg width="60" height="20" viewBox="0 0 60 20" className="text-purple-500">
                   <path
@@ -567,12 +562,12 @@ export default function Reports() {
           </div>
         </div>
 
-        {/* Total Funds in the system */}
+        {/* Total Payouts (Profit Distributed) */}
         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">Total Funds in the system</p>
-              <p className="text-2xl font-bold text-gray-900">₹200k</p>
+              <p className="text-sm text-gray-600 mb-1">Total Profit Distributed</p>
+              <p className="text-2xl font-bold text-gray-900">₹{stats.totalProfitDistributed?.toFixed(2) || '0.00'}</p>
               <div className="mt-2">
                 <svg width="60" height="20" viewBox="0 0 60 20" className="text-emerald-500">
                   <path
@@ -598,11 +593,10 @@ export default function Reports() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                ? 'border-green-500 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
             >
               {tab.label}
             </button>
@@ -612,24 +606,26 @@ export default function Reports() {
 
       {/* Filters */}
       <div className="flex items-center space-x-4">
-        <Button variant="outline" className="bg-gray-800 text-white hover:bg-gray-700">
-          All
+        <Button variant="outline" className="bg-gray-800 text-white hover:bg-gray-700" onClick={() => setFilters({ role: '', market: '', dateRange: 'all', startDate: '', endDate: '' })}>
+          Reset Filters
         </Button>
-        <Select defaultValue="">
+        <Select value={filters.role} onChange={(e) => handleFilterChange('role', e.target.value)}>
           <option value="">Role</option>
-          <option value="admin">Admin</option>
-          <option value="user">User</option>
+          <option value="ADMIN">Admin</option>
+          <option value="SUPER_MASTER">Sub-Admin</option>
+          <option value="USER">User</option>
         </Select>
-        <Select defaultValue="">
-          <option value="">Market</option>
-          <option value="nifty">Nifty</option>
-          <option value="sensex">Sensex</option>
+        <Select value={filters.market} onChange={(e) => handleFilterChange('market', e.target.value)}>
+          <option value="">All Markets</option>
+          {segments.map((segment: any) => (
+            <option key={segment.id} value={segment.id}>{segment.name}</option>
+          ))}
         </Select>
-        <Select defaultValue="">
-          <option value="">Date range</option>
+        <Select value={filters.dateRange} onChange={(e) => handleFilterChange('dateRange', e.target.value)}>
           <option value="today">Today</option>
           <option value="week">This Week</option>
           <option value="month">This Month</option>
+          <option value="all">All Time</option>
         </Select>
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -641,13 +637,13 @@ export default function Reports() {
       </div>
 
       {/* P&L Overview Chart */}
-     
+
 
       {/* Tab Content */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         {renderTabContent()}
       </div>
-       <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
           <h3 className="text-lg font-semibold text-gray-900">P&L Overview</h3>
           <div className="flex flex-col sm:flex-row gap-3">
@@ -666,11 +662,11 @@ export default function Reports() {
         </div>
 
         <div className="h-48 lg:h-64">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <BarChart data={pnlOverviewData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fill: '#9ca3af' }}
