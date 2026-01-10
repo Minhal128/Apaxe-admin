@@ -53,7 +53,7 @@ export default function EditProfile() {
     { immediate: !!id }
   )
 
-  const user: UserData | null = userData?.data || userData || null
+  const user: UserData | null = userData?.user || userData?.data || userData || null
 
   // Populate form when user data loads
   useEffect(() => {
@@ -181,7 +181,7 @@ export default function EditProfile() {
                   User ID
                 </label>
                 <Input
-                  value={`#${user.id.slice(-8)}`}
+                  value={`#${user.id?.slice(-8) || 'N/A'}`}
                   disabled
                   className="bg-gray-100"
                 />

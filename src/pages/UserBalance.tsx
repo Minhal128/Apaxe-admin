@@ -57,7 +57,7 @@ export default function UserBalance() {
     { immediate: !!id }
   )
 
-  const user: UserData | null = userData?.data || userData || null
+  const user: UserData | null = userData?.user || userData?.data || userData || null
   const transactions: LedgerEntry[] = ledgerData?.data || ledgerData || []
 
   const formatCurrency = (value: number | undefined | null) => {
@@ -192,7 +192,7 @@ export default function UserBalance() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">{displayName}</h2>
-                <p className="text-gray-500">{user.role} · ID: #{user.id.slice(-8)}</p>
+                <p className="text-gray-500">{user.role} · ID: #{user.id?.slice(-8) || 'N/A'}</p>
                 <p className="text-gray-400 text-sm">{user.email}</p>
                 <div className="flex items-center space-x-2 mt-2">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
@@ -373,7 +373,7 @@ export default function UserBalance() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold">{displayName}</p>
-                <p className="text-sm text-gray-500">{user.role} · ID: #{user.id.slice(-8)}</p>
+                <p className="text-sm text-gray-500">{user.role} · ID: #{user.id?.slice(-8) || 'N/A'}</p>
               </div>
               <div className="text-right">
                 <p className="font-bold">{formatCurrency(user.balance)}</p>
@@ -433,7 +433,7 @@ export default function UserBalance() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold">{displayName}</p>
-                <p className="text-sm text-gray-500">{user.role} · ID: #{user.id.slice(-8)}</p>
+                <p className="text-sm text-gray-500">{user.role} · ID: #{user.id?.slice(-8) || 'N/A'}</p>
               </div>
               <div className="text-right">
                 <p className="font-bold">{formatCurrency(user.balance)}</p>

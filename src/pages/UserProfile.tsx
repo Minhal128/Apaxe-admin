@@ -55,7 +55,7 @@ export default function UserProfile() {
     { immediate: !!id }
   )
 
-  const user: UserData | null = userData?.data || userData || null
+  const user: UserData | null = userData?.user || userData?.data || userData || null
   const transactions: LedgerEntry[] = ledgerData?.data || ledgerData || []
   const totalTrades = tradesData?.meta?.total || tradesData?.total || 0
 
@@ -150,7 +150,7 @@ export default function UserProfile() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">{displayName}</h2>
-                <p className="text-gray-500">{user.role} · ID: #{user.id.slice(-8)}</p>
+                <p className="text-gray-500">{user.role} · ID: #{user.id?.slice(-8) || 'N/A'}</p>
                 <div className="flex items-center space-x-2 mt-2">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                     user.status === 'ACTIVE' 
@@ -256,7 +256,7 @@ export default function UserProfile() {
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm mb-1">User ID</p>
-                  <p className="font-medium">#{user.id.slice(-8)}</p>
+                  <p className="font-medium">#{user.id?.slice(-8) || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-gray-500 text-sm mb-1">Role</p>
