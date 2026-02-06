@@ -48,7 +48,7 @@ export function useApi<T>(
 
       return data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
+      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message || 'An error occurred';
 
       setState({
         data: null,
@@ -108,7 +108,7 @@ export function useApiMutation<T>(
 
       return data;
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
+      const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message || 'An error occurred';
 
       setState({
         data: null,

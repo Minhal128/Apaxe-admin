@@ -101,7 +101,7 @@ export default function UserBalance() {
       refetchUser()
       refetchLedger()
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to add funds')
+      toast.error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to add funds')
     } finally {
       setIsSubmitting(false)
     }
@@ -131,7 +131,7 @@ export default function UserBalance() {
       refetchUser()
       refetchLedger()
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to deduct funds')
+      toast.error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to deduct funds')
     } finally {
       setIsSubmitting(false)
     }

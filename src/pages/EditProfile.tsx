@@ -88,7 +88,7 @@ export default function EditProfile() {
       toast.success('Profile updated successfully!')
       navigate(`/user-profile/${id}`)
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update profile')
+      toast.error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to update profile')
     } finally {
       setIsSubmitting(false)
     }
@@ -107,7 +107,7 @@ export default function EditProfile() {
       setShowResetPasswordModal(false)
       setNewPassword('')
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to reset password')
+      toast.error(error.response?.data?.error?.message || error.response?.data?.message || 'Failed to reset password')
     } finally {
       setIsResettingPassword(false)
     }
