@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "start": "serve dist -s -l $PORT",
+    "dev": "node init && vite",
+    "build": "node init && tsc -b && vite build",
+    "start": "node init && serve dist -s -l $PORT",
     "lint": "eslint .",
     "preview": "vite preview"
   },
